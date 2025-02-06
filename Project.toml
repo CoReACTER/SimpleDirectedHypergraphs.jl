@@ -1,0 +1,7 @@
+name = "SimpleDirectedHypergraphs"
+uuid = "a42c6b43-640c-4761-b4a8-4f98c31d02e9"
+authors = ["Evan Walter Clark Spotte-Smith"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1.6.7"
