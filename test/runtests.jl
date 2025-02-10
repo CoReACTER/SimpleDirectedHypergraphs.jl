@@ -5,7 +5,7 @@ using Random
 using DataStructures
 using Graphs
 using Test
-using JET
+# using JET
 
 
 dh1 = DirectedHypergraph{Float64, Int, String}(7,6)

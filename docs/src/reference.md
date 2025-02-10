@@ -14,7 +14,7 @@ Abstract types
 
 ```@docs
 
-AbstractDirectedHypergraph{T} <: AbstractHypergraph{Tuple{Union{T, Nothing}, Union{T, Nothing}}}
+AbstractDirectedHypergraph{T} <: AbstractSimpleHypergraph{Tuple{Union{T, Nothing}, Union{T, Nothing}}}
 ```
 
 Creating a directed hypergraph
