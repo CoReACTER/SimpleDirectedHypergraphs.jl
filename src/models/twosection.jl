@@ -168,7 +168,7 @@ function SimpleHypergraphs.get_twosection_adjacency_mx(
     h::H;
     count_self_loops::Bool=false,
     replace_weights::Union{Nothing,Real}=nothing
-    ) where {T<:Real, H<:AbstractDirectedHypergraph{T}}
+    ) where {T<:Real, H<:AbstractDirectedHypergraph{Tuple{Union{T, Nothing}, Union{T, Nothing}}}}
     mx = zeros(replace_weights === nothing ? Tuple{T,T} : typeof(replace_weights), nhv(h), nhv(h))
     for he in 1:nhe(h)
         for vt in keys(h.hg_tail.he2v[he])

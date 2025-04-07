@@ -1,9 +1,9 @@
 """
-    AbstractDirectedHypergraph{T} <: AbstractSimpleHypergraph{Tuple{Union{T, Nothing}, Union{T, Nothing}}}
+    AbstractDirectedHypergraph{T} <: AbstractSimpleHypergraph{T}
 
 An abstract directed hypergraph type storing information about vertices and hyperedges.
 """
-abstract type AbstractDirectedHypergraph{T} <: AbstractSimpleHypergraph{Tuple{Union{T, Nothing}, Union{T, Nothing}}} end
+abstract type AbstractDirectedHypergraph{T} <: AbstractSimpleHypergraph{T} end
 
 @traitimpl SimpleHypergraphs.IsDirected{AbstractDirectedHypergraph}
 SimpleHypergraphs.isdirected(::Type{T}) where {T<:AbstractDirectedHypergraph} = true

@@ -74,50 +74,10 @@ end
 
 
 """
-    hg_save(io::IO, h::BasicDirectedHypergraph, format::JSON_Format)
-
-Saves a directed hypergraph `h` to an output stream `io` in `json` format.
-
-If `h` has `Composite Types` either for vertex metadata or hyperedges metadata,
-the user has to explicit tell the JSON3 package about it, for instance using:
-
-`JSON3.StructType(::Type{MyType}) = JSON3.Struct()`.
-
-See the (JSON3.jl documentation)[https://github.com/quinnj/JSON3.jl] for more details.
-
-The `json` in output contains the following information (keys):
-
-* `n` : number of vertices
-* `k` : number of hyperedges
-* `tail` : a matrix representation of the tails of `h`, where rows are vertices and columns are hyperedges
-* `head` : a matrix representation of the heads of `h`, where rows are vertices and columns are hyperedges
-* `v_meta` : vertices metadata (`nothing` for a basic directed hypergraph)
-* `he_meta_tail` : metadata for hyperedge tails (`nothing` for a basic directed hypergraph)
-* `he_meta_head` : metadata for hyperedge heads (`nothing` for a basic directed hypergraph)
-
-"""
-function SimpleHypergraphs.hg_save(io::IO, h::BasicDirectedHypergraph, format::JSON_Format)
-    json_hg = Dict{Symbol, Any}()
-
-    json_hg[:n] = nhv(h)
-    json_hg[:k] = nhe(h)
-
-    json_hg[:tail] = JSON3.write(Matrix(h.hg_tail))
-    json_hg[:head] = JSON3.write(Matrix(h.hg_head))
-    
-    json_hg[:v_meta] = JSON3.write(nothing)
-    json_hg[:he_meta_tail] = JSON3.write(nothing)
-    json_hg[:he_meta_head] = JSON3.write(nothing)
-
-    JSON3.write(io, json_hg)
-end
-
-
-"""
     dhg_load(
         io::IO,
         format::EHGF_Format;
-        HType::Type{H} = BasicDirectedHypergraph,
+        HType::Type{H} = DirectedHypergraph,
         T::Type{U} = Bool,
         D::Type{<:AbstractDict{Int, U}} = Dict{Int, T},
     ) where {U <: Real, H <: AbstractDirectedHypergraph}
@@ -135,7 +95,7 @@ Skips a single initial comment.
 function dhg_load(
     io::IO,
     format::EHGF_Format;
-    HType::Type{H} = BasicDirectedHypergraph,
+    HType::Type{H} = DirectedHypergraph,
     T::Type{U} = Bool,
     D::Type{<:AbstractDict{Int, U}} = Dict{Int, T},
 ) where {U <: Real, H <: AbstractDirectedHypergraph}
@@ -232,7 +192,7 @@ Loads a hypergraph from a stream `io` from `json` format.
 function dhg_load(
         io::IO,
         format::JSON_Format;
-        HType::Type{H} = BasicDirectedHypergraph,
+        HType::Type{H} = DirectedHypergraph,
         T::Type{U} = Bool,
         D::Type{<:AbstractDict{Int, U}} = Dict{Int, T},
         V = Nothing,
@@ -243,7 +203,7 @@ function dhg_load(
     m_tail = reshape(JSON3.read(json_hg.tail, Array{Union{T, Nothing}}), json_hg.n, json_hg.k)
     m_head = reshape(JSON3.read(json_hg.head, Array{Union{T, Nothing}}), json_hg.n, json_hg.k)
 
-    if V != Nothing && E != Nothing && hasmeta(HType)
+    if V != Nothing && E != Nothing
         v_meta = JSON3.read(json_hg.v_meta, Array{Union{V, Nothing}})
         he_meta_tail = JSON3.read(json_hg.he_meta_tail, Array{Union{E, Nothing}})
         he_meta_head = JSON3.read(json_hg.he_meta_head, Array{Union{E, Nothing}})
@@ -260,7 +220,7 @@ end
     dhg_load(
         fname::AbstractString;
         format::Abstract_HG_format = HGF_Format(),
-        HType::Type{H} = BasicDirectedHypergraph,
+        HType::Type{H} = DirectedHypergraph,
         T::Type{U} = Bool,
         D::Type{<:AbstractDict{Int, U}} = Dict{Int, T},
         V = Nothing,
@@ -282,7 +242,7 @@ The default saving format is `hgf`.
 function dhg_load(
         fname::AbstractString;
         format::Abstract_HG_format = EHGF_Format(),
-        HType::Type{H} = BasicDirectedHypergraph,
+        HType::Type{H} = DirectedHypergraph,
         T::Type{U} = Bool,
         D::Type{<:AbstractDict{Int, U}} = Dict{Int, T},
         V = Nothing,
@@ -290,10 +250,10 @@ function dhg_load(
     ) where {U <: Real, H <: AbstractDirectedHypergraph}
 
     if format == EHGF_Format()
-        if HType == BasicDirectedHypergraph || HType == DirectedHypergraph
+        if HType == DirectedHypergraph
             open(io -> dhg_load(io, format; HType=HType, T=T, D=D), fname, "r")
         else
-            error("EHGF loading only implemented for BasicDirectedHypergraph and DirectedHypergraph")
+            error("EHGF loading only implemented for DirectedHypergraph")
         end
     else
         open(io -> dhg_load(io, format; HType=HType, T=T, D=D, V=V, E=E), fname, "r")

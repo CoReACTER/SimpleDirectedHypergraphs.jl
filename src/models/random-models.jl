@@ -67,7 +67,7 @@ end
 
 # TODO: overwrite issue
 """
-    random_kuniform_model(nVertices::Int, nEdges::Int, k::Int; HType::Type{H}=BasicDirectedHypergraph, no_self_loops::Bool=false) where {H<:AbstractDirectedHypergraph}
+    random_kuniform_model(nVertices::Int, nEdges::Int, k::Int; HType::Type{H}=DirectedHypergraph, no_self_loops::Bool=false) where {H<:AbstractDirectedHypergraph}
 
 Generates a *k*-uniform directed hypergraph, i.e., an hypergraph where each hyperedge has size *k = k_tail + k_head*.
 In this implementation, *k_tail* and *k_head* are not necessarily equal.
@@ -80,7 +80,7 @@ function SimpleHypergraphs.random_kuniform_model(
     nVertices::Int,
     nEdges::Int,
     k::Int,
-    HType::Type{H}=BasicDirectedHypergraph;
+    HType::Type{H}=DirectedHypergraph;
     no_self_loops::Bool=false
 ) where {H<:AbstractDirectedHypergraph}
     mx_tail = Matrix{Union{Nothing,Bool}}(nothing, nVertices,nEdges)
