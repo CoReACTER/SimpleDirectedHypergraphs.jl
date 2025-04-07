@@ -9,11 +9,20 @@ DocTestSetup = quote
 end
 ```
 
+Abstract types
+--------------
+
+```@docs
+AbstractDirectedHypergraph
+```
+
+
 Creating a directed hypergraph
 ---------------------
 
 ```@docs
 DirectedHypergraph
+
 SimpleHypergraphs.random_model(::Int, ::Int, ::Type{H}; ::Bool) where {H<:AbstractDirectedHypergraph}
 SimpleHypergraphs.random_kuniform_model(::Int, ::Int, ::Int, ::Type{H}; ::Bool) where {H<:AbstractDirectedHypergraph}
 SimpleHypergraphs.random_dregular_model(::Int, ::Int, ::Int, ::Type{H}; ::Bool) where {H<:AbstractDirectedHypergraph}
@@ -27,10 +36,12 @@ SimpleHypergraphs.add_hyperedge!(::DirectedHypergraph{T, V, E, D}; ::D, ::D, ::U
 
 SimpleHypergraphs.add_vertex!(::DirectedHypergraph{T, V, E, D}; ::D, ::D, ::Union{V,Nothing}) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
 
-SimpleHypergraphs.set_vertex_meta!(DirectedHypergraph{T, V, E, D}, ::Union{V,Nothing}, ::Int) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
-SimpleHypergraphs.get_vertex_meta(DirectedHypergraph{T, V, E, D}, ::Int) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
+SimpleHypergraphs.set_vertex_meta!(::DirectedHypergraph{T, V, E, D}, ::Union{V,Nothing}, ::Int) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
+SimpleHypergraphs.get_vertex_meta(::DirectedHypergraph{T, V, E, D}, ::Int) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
 SimpleHypergraphs.set_hyperedge_meta!(::DirectedHypergraph{T, V, E, D}, ::Union{E,Nothing}, ::Union{E,Nothing}, ::Int) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
+SimpleHypergraphs.set_hyperedge_meta!(::DirectedHypergraph{T, V, E, D}, ::Union{E,Nothing}, ::Int, ::HyperedgeDirection) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
 SimpleHypergraphs.get_hyperedge_meta(::DirectedHypergraph{T, V, E, D}, ::Int) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
+SimpleHypergraphs.get_hyperedge_meta(::DirectedHypergraph{T, V, E, D}, ::Int, ::HyperedgeDirection) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
 
 SimpleHypergraphs.remove_vertex!(::DirectedHypergraph, ::Int)
 
@@ -63,7 +74,7 @@ dh[:,1]
 
 # output
 
-4-element Vector{Union{Nothing, Tuple{Union{Nothing, Int64}, Union{Nothing, Int64}}}}:
+4-element Vector{Tuple{Union{Nothing, Int64}, Union{Nothing, Int64}}}:
  (1, nothing)
  (1, nothing)
  (nothing, 2)
@@ -92,11 +103,30 @@ SimpleHypergraphs.gethyperedges(::H, ::Int) where {H <: AbstractDirectedHypergra
 get_weakly_connected_components(::H) where {H <: AbstractDirectedHypergraph}
 get_strongly_connected_components(::H) where {H <: AbstractDirectedHypergraph}
 
-SimpleHypergraphs.get_twosection_adjacency_mx(::H; ::Bool, ::Union{Nothing,Real}) where {H<:AbstractDirectedHypergraph}
+SimpleHypergraphs.get_twosection_adjacency_mx(::H; ::Bool, ::Union{Nothing,Real}) where {T<:Real, H<:AbstractDirectedHypergraph{Tuple{Union{T, Nothing}, Union{T, Nothing}}}}
 SimpleHypergraphs.random_walk(::H, ::Int; ::Function, ::Function, ::Bool) where {H <: AbstractDirectedHypergraph}
 
 SimpleHypergraphs.dual(h::DirectedHypergraph)
 ```
+
+Modifying a directed hypergraph
+-------------------------------
+```@docs
+to_undirected(::DirectedHypergraph{T,V,E,D}) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
+SimpleHypergraphs.prune_hypergraph!(::H) where {H<:AbstractDirectedHypergraph}
+SimpleHypergraphs.prune_hypergraph(::H) where {H<:AbstractDirectedHypergraph}
+```
+
+Pathfinding
+-----------
+```@docs
+
+_visit(h::H, v::Int) where {H <: AbstractDirectedHypergraph}
+SimpleHypergraphs.shortest_path(b::BipartiteView{H}, source::Int, target::Int) where {H<:AbstractDirectedHypergraph}
+SimpleHypergraphs.shortest_path(t::TwoSectionView{H}, source::Int, target::Int) where {H<:AbstractDirectedHypergraph}
+
+```
+
 
 I/O
 ---
@@ -105,5 +135,25 @@ Directed hypergraphs can be saved as and loaded from JSON- and EHGF-formatted fi
 
 ```@docs
 SimpleHypergraphs.hg_save
-SimpleHypergraphs.hg_load
+
+dhg_load
+```
+
+
+Graph utilities
+---------------
+
+```@docs
+Graphs.ne(::SimpleHypergraphs.BipartiteView{H}) where {H<:AbstractDirectedHypergraph}
+Graphs.ne(::SimpleHypergraphs.TwoSectionView{H}) where {H<:AbstractDirectedHypergraph}
+Graphs.SimpleGraphs.SimpleGraph(::SimpleHypergraphs.BipartiteView{H}) where {H<:AbstractDirectedHypergraph}
+Graphs.SimpleGraphs.SimpleDiGraph(::SimpleHypergraphs.BipartiteView{H}) where {H<:AbstractDirectedHypergraph}
+Graphs.SimpleGraphs.SimpleDiGraph(::SimpleHypergraphs.TwoSectionView{H}) where {H<:AbstractDirectedHypergraph}
+
+Graphs.SimpleGraphs.badj(::SimpleHypergraphs.BipartiteView{H}) where {H<:AbstractDirectedHypergraph}
+Graphs.SimpleGraphs.badj(::SimpleHypergraphs.TwoSectionView{H}) where {H<:AbstractDirectedHypergraph}
+Graphs.SimpleGraphs.fadj(::SimpleHypergraphs.BipartiteView{H}) where {H<:AbstractDirectedHypergraph}
+Graphs.SimpleGraphs.fadj(::SimpleHypergraphs.TwoSectionView{H}) where {H<:AbstractDirectedHypergraph}
+
+Graphs.all_neighbors(::SimpleHypergraphs.TwoSectionView{H}, ::Int64) where {H<:AbstractDirectedHypergraph}
 ```

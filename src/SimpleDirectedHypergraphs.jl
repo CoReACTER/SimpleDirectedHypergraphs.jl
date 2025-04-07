@@ -11,7 +11,7 @@ using LinearAlgebra
 using SimpleTraits
 
 export AbstractDirectedHypergraph
-export DirectedHypergraph
+export DirectedHypergraph, HyperedgeDirection
 
 export EHGF_Format
 export dhg_load
