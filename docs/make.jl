@@ -8,7 +8,7 @@ makedocs(;
     authors="Evan Walter Clark Spotte-Smith",
     sitename="SimpleDirectedHypergraphs.jl",
     format=Documenter.HTML(;
-        canonical="https://coreacter.org/SimpleDirectedHypergraphs.jl",
+        canonical="https://CoReACTER.org/SimpleDirectedHypergraphs.jl",
         edit_link="main",
         assets=String[],
     ),
