@@ -17,7 +17,15 @@ A *hypergraph* is a generalization of a graph. Specifically, a conventional grap
 abstract type AbstractHypergraph{T} <: AbstractMatrix{T} end
 ```
 
-A *directed hypergraph* is, analogously, a generalization of a directed graph. There are many possible definitions of hypergraphs in use in the literature. Here, we take a rather general definition: a directed hypergraph $\overrightarrow{H} := (V; \overrightarrow{E})$, where a *directed hyperedge* $\overrightarrow{e} := (e^t \subseteq V; e^h \subseteq V)$. Here, $e^t$ is called the *tail* of the directed hyperedge, and $e^h$ is called the head. In our definition, the head and tail can both include any number of vertices (limited, of course, by the size of $V$).
+A *directed hypergraph* is, analogously, a generalization of a directed graph. There are many possible definitions of hypergraphs in use in the literature. Here, we take a rather general definition: a directed hypergraph 
+
+$\overrightarrow{H} := (V; \overrightarrow{E})$,
+
+where a *directed hyperedge*
+
+$\overrightarrow{e} := (e^t \subseteq V; e^h \subseteq V)$.
+
+Here, $e^t$ is called the *tail* of the directed hyperedge, and $e^h$ is called the head. In our definition, the head and tail can both include any number of vertices (limited, of course, by the size of $V$).
 
 Like the undirected hypergraphs in `SimpleHypergraphs.jl`, we represent directed hypergraphs in `SimpleDirectedHypergraphs.jl` as matrices. Under the hood, a directed hypergraph is made up of two undirected hypergraphs: one representing the "tails" and one representing the "head".
 
