@@ -18,6 +18,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/espottesmith/SimpleDirectedHypergraphs.jl",
+    repo="github.com/CoReACTER/SimpleDirectedHypergraphs.jl",
     devbranch="main",
 )
