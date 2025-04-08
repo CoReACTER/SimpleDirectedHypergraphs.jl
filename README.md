@@ -19,11 +19,11 @@ abstract type AbstractHypergraph{T} <: AbstractMatrix{T} end
 
 A *directed hypergraph* is, analogously, a generalization of a directed graph. There are many possible definitions of hypergraphs in use in the literature. Here, we take a rather general definition: a directed hypergraph 
 
-$\overrightarrow{H} := (V; \overrightarrow{E})$,
+$\overrightarrow{H} := (V; \overrightarrow{E})$
 
 where a *directed hyperedge*
 
-$\overrightarrow{e} := (e^t \subseteq V; e^h \subseteq V)$.
+$\overrightarrow{e} := (e^t \subseteq V; e^h \subseteq V)$
 
 Here, $e^t$ is called the *tail* of the directed hyperedge, and $e^h$ is called the head. In our definition, the head and tail can both include any number of vertices (limited, of course, by the size of $V$).
 
@@ -49,7 +49,7 @@ Other applications of directed hypergraphs include [transportation systems, data
 
 Note that `SimpleHypergraphs.jl` has a Python dependency, but it is only necessary for plotting. If you want to use the available plotting functions for non-directed hypergraphs, you'll need to follow the additional installation instructions in the [SimpleHypergraphs.jl README](https://github.com/pszufe/SimpleHypergraphs.jl).
 
-## Features and Contributing
+## Features and contributing
 
 `SimpleDirectedHypergraphs.jl` is still in early development. Things could change significantly, and the interface could even break!
 
