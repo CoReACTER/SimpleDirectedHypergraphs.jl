@@ -147,8 +147,8 @@ struct DirectedHypergraph{T<:Real,V,E,D<:AbstractDict{Int, T}} <: AbstractDirect
         he_meta_head=Vector{Union{E, Nothing}}(nothing, k)
         ) where {T<:Real,V,E,D<:AbstractDict{Int, T}} = 
         new{T,V,E,D}(
-            Hypergraph{T,D}(n, k),
-            Hypergraph{T,D}(n, k),
+            Hypergraph{T,Nothing,Nothing,D}(n, k),
+            Hypergraph{T,Nothing,Nothing,D}(n, k),
             v_meta, he_meta_tail, he_meta_head
         )
 
