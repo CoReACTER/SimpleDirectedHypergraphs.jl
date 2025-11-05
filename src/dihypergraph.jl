@@ -133,8 +133,8 @@ an error if the vertex metadata of the two hypergraphs is not element-for-elemen
     the directed hypergraph
 """
 struct DirectedHypergraph{T<:Real,V,E,D<:AbstractDict{Int, T}} <: AbstractDirectedHypergraph{Tuple{Union{T, Nothing}, Union{T, Nothing}}}
-    hg_tail::Hypergraph{T,D}
-    hg_head::Hypergraph{T,D}
+    hg_tail::Hypergraph{T,Nothing,Nothing,D}
+    hg_head::Hypergraph{T,Nothing,Nothing,D}
 
     v_meta::Vector{Union{V,Nothing}}
     he_meta_tail::Vector{Union{E,Nothing}}

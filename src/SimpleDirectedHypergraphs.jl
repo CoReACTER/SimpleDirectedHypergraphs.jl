@@ -9,6 +9,7 @@ using JSON3
 using Random
 using LinearAlgebra
 using SimpleTraits
+using InvertedIndices
 
 export AbstractDirectedHypergraph
 export DirectedHypergraph, HyperedgeDirection
