@@ -15,6 +15,9 @@ function initialize_dihyperpath_state(
         hg::H,
         hyperedge_weights::Vector{T}
     ) where {H <: AbstractDirectedHypergraph, T <: Real}
+    # Hyperedge weights need to be nonnegative
+    @assert all(hyperedge_weights .>= 0)
+
     nv = nhv(hg)
     ne = nhe(hg)
 
@@ -31,13 +34,6 @@ function initialize_dihyperpath_state(
         fill(typemax(T), ne),
         edge_heap_points
     )
-end
-
-"""
-Kind of silly function
-"""
-function validate_weights(w::AbstractVector{T}) where {T <: Real}
-    @assert all(w .>= 0)
 end
 
 """
@@ -318,7 +314,12 @@ end
 """
 
 """
-function short_hyperpath_vhe(hg::H, v::Int, he::Int) where {H <: AbstractDirectedHypergraph}
+function short_hyperpath_vhe(
+    hg::H,
+    v::Int,
+    he::Int,
+    state::DiHyperPathState{T}
+) where {H <: AbstractDirectedHypergraph, T <: Real}
     Q = Queue{Int}()
     for e in state.he_inedges[he]
         enqueue!(Q, e)
@@ -359,7 +360,7 @@ function short_hyperpath_vhe(hg::H, v::Int, he::Int) where {H <: AbstractDirecte
         hg_copy[:, e] .= nothing
 
         # Only if hyperedge is essential for reaching target,
-        if !is_reachable(hg_copy, s, he)
+        if !is_reachable(hg_copy, s, he, state)
             # Restore hyperedge to hypergraph copy
             hg_copy[:, e] .= hg[:, e]
             push!(path, e)
@@ -372,19 +373,182 @@ end
 """
 
 """
-function is_reachable(hg::H, v::Int, he::Int) where {H <: AbstractDirectedHypergraph}
-    # TODO
+function is_reachable(
+    hg::H,
+    source_v::Int,
+    target_he::Int,
+    state::DiHyperPathState{T}
+) where {H <: AbstractDirectedHypergraph, T <: Real}
+    # Priority queue of reached vertices
+    Q = Queue{Int}()
+    enqueue!(Q, source_v)
+    
+    state.reached_vs[source_v] = true
+
+    # Which vertices/hyperedges have been reached?
+    reached_vs = Set{Int}()
+    reached_es = Set{Int}()
+
+    while length(Q) > 0
+        v = popfirst!(Q)
+        push!(reached_vs, v)
+
+        for out_e in keys(hg.hg_tail.v2he[v])
+            # Following pseudocode exactly. This feels awkward; how slow would it be to just query reached_vs?
+            state.hes_tail_count[out_e] -= 1
+
+            if state.hes_tail_count[out_e] == 0
+                push!(reached_es, out_e)
+                if out_e == target_he
+                    return true
+                end
+
+                for w in keys(hg.hg_head.he2v[out_e])
+                    if !state.reached_vs[w]
+                        enqueue!(Q, w)
+                        state.reached_vs[w] = true
+                    end
+                end
+            end
+        end
+    end
+
+    # Restore state
+    for v in reached_vs
+        state.reached_vs[v] = false
+        for out_e in hg.hg_tail.v2he[v]
+            state.hes_tail_count[out_e] += 1
+        end
+    end
+
+    return false
+end
+
+"""
+
+"""
+function is_reachable(
+    hg::H,
+    source_v::Int,
+    target_v::Int,
+    state::DiHyperPathState{T}
+) where {H <: AbstractDirectedHypergraph, T <: Real}
+    # Priority queue of reached vertices
+    Q = Queue{Int}()
+    enqueue!(Q, source_v)
+    
+    state.reached_vs[source_v] = true
+
+    # Which vertices/hyperedges have been reached?
+    reached_vs = Set{Int}()
+    reached_es = Set{Int}()
+
+    while length(Q) > 0
+        v = popfirst!(Q)
+        push!(reached_vs, v)
+
+        for out_e in keys(hg.hg_tail.v2he[v])
+            # Following pseudocode exactly. This feels awkward; how slow would it be to just query reached_vs?
+            state.hes_tail_count[out_e] -= 1
+
+            if state.hes_tail_count[out_e] == 0
+                push!(reached_es, out_e)
+
+                for w in keys(hg.hg_head.he2v[out_e])
+                    if w == target_v
+                        return true
+                    end
+
+                    if !state.reached_vs[w]
+                        enqueue!(Q, w)
+                        state.reached_vs[w] = true
+                    end
+                end
+            end
+        end
+    end
+
+    # Restore state
+    for v in reached_vs
+        state.reached_vs[v] = false
+        for out_e in hg.hg_tail.v2he[v]
+            state.hes_tail_count[out_e] += 1
+        end
+    end
+
+    return false
+end
+
+"""
+
+"""
+function get_hyperpath(hg::H, source::Int, target::Int, out::Set{Int}) where {H <: AbstractDirectedHypergraph}
+    # Remove excluded hyperedges
+    hg_copy = deepcopy(hg)
+    hg_copy[:, sort(collect(out))] .= nothing
+
+    weights = ones(nhe(hg_copy))
+    state = initialize_dihyperpath_state(hg_copy, weights)
+
+    reached_vs, reached_es = forward_reachable(hg_copy, source, state)
+
+    # Path does not exist
+    if target ∉ reached_vs
+        return Set{Int}()
+    end
+    
+    path = Set{Int}()
+
+    # Try to minimize the size of the path by eliminating unnecessary hyperedges
+    for e in reached_es
+        hg_copy[:, e] .= nothing
+
+        # Only if hyperedge is essential for reaching target,
+        if !isreachable(hg_copy, source, target, state)
+            # Restore hyperedge to hypergraph copy
+            hg_copy[:, e] .= hg[:, e]
+            push!(path, e)
+        end
+    end
+
+    return path
 end
 
 """
 
 """
 function all_hyperpaths(hg::H, source::Int, target::Int) where {H <: AbstractDirectedHypergraph}
+    # Queue of subproblems
+    # Subproblem is defined as a "out" set of hyperedges (which must not be present in a path) and "keep" hyperedges
+    # which must be present in the path
+    Q = Queue{Tuple{Set{Int}, Set{Int}}}()
+    
+    paths = Set{Set{Int}}()
 
+    # Start with no restrictions
+    enqueue!(Q, (Set{Int}(), Set{Int}()))
+
+    while length(Q) > 0
+        out, keep = popfirst!(Q)
+
+        path = get_hyperpath(hg, source, target, out)
+
+        if length(path) > 0 && path ∉ paths
+            push!(paths, path)
+
+            k = keep
+            for e in setdiff(path, keep)
+                enqueue!(Q, (union(out, e), k))
+                push!(k, e)
+            end
+        end
+    end
+
+    paths
 end
 
 function all_hyperpaths(hg::H, source::Int, targets::Set{Int}) where {H <: AbstractDirectedHypergraph}
-
+    # TODO: you are here
 end
 
 function all_hyperpaths(hg::H, sources::Set{Int}, target::Int) where {H <: AbstractDirectedHypergraph}
