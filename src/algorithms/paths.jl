@@ -1,5 +1,29 @@
 # TODO: weights (default vector of 1.0 of length nve(hg))
 
+"""
+    struct DiHyperPathState{T}(
+        reached_vs::BitVector,
+        marked_hes::BitVector,
+        removed_hes::BitVector,
+        hes_tail_count::Vector{Int},
+        he_inedges::Vector{Set{Int}},
+        edge_weights::Vector{T},
+        edge_costs::Vector{T},
+        edge_heap_points::Vector{Union{Nothing, Int}}
+    ) where {T<:Real}
+
+    Stores the state of a pathfinding operation.
+
+    `reached_vs` and `marked_hes` track which vertices and hyperedges, respectively, have been visited and/or need to
+    be searched. `removed_hes` tracks which hyperedges have been removed from the edge heap during the main heuristic
+    pathfinding operation (see `shortest_hyperpath_kk_heuristic`). `hes_tail_count` is a vector containing the size of
+    the tail of each hyperedge. `he_inedges` tracks which hyperedges flow into which other hyperedges (i.e., for a
+    hyperedge `f`, the *inedges* are those hyperedges `e` where there exists some vertex `v` that is in both the head
+    of `e` and the tail of `f`). `edge_weights` are a set of initially-defined costs associated with each directed
+    hyperedge, and `edge_costs` are the (estimated) costs from the source vertex to each hyperedge. Finally,
+    `edge_heap_points` tracks the references for each hyperedge in the heap used during heuristic pathfinding.
+
+"""
 struct DiHyperPathState{T} where {T<:Real}
     reached_vs::BitVector
     marked_hes::BitVector
@@ -11,6 +35,15 @@ struct DiHyperPathState{T} where {T<:Real}
     edge_heap_points::Vector{Union{Nothing, Int}}
 end
 
+"""
+    initialize_dihyperpath_state(
+        hg::H,
+        hyperedge_weights::Vector{T}
+    ) where {H <: AbstractDirectedHypergraph, T <: Real}
+
+    Construct an initial state for directed hypergraph pathfinding on hypergraph `hg` with hyperedge weights (i.e.,
+    costs) `hyperedge_weights`.
+"""
 function initialize_dihyperpath_state(
         hg::H,
         hyperedge_weights::Vector{T}
@@ -37,9 +70,19 @@ function initialize_dihyperpath_state(
 end
 
 """
+    forward_reachable(
+        hg::H,
+        source::Int,
+        state::DiHyperPathState{T}
+    ) where {H <: AbstractDirectedHypergraph, T <: Real}
+
 
 """
-function forward_reachable(hg::H, source::Int, state::DiHyperPathState{T}) where {H <: AbstractDirectedHypergraph, T <: Real}
+function forward_reachable(
+    hg::H,
+    source::Int,
+    state::DiHyperPathState{T}
+) where {H <: AbstractDirectedHypergraph, T <: Real}
     # Priority queue of reached vertices
     Q = Queue{Int}()
     enqueue!(Q, source)
@@ -130,7 +173,48 @@ end
 
 
 """
+    shortest_hyperpath_kk_heuristic(
+        hg::H,
+        source::Int,
+        target::Int,
+        cost_function::Function,
+        hyperedge_weights::Vector{T}
+    ) where {H <: AbstractDirectedHypergraph, T <: Real}
 
+    shortest_hyperpath_kk_heuristic(
+        hg::DirectedHypergraph{T, V, E, D},
+        source::Int,
+        targets::Set{Int},
+        cost_function::Function,
+        hyperedge_weights::Vector{T}
+    ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
+
+    shortest_hyperpath_kk_heuristic(
+        hg::DirectedHypergraph{T, V, E, D},
+        sources::Set{Int},
+        target::Int,
+        cost_function::Function,
+        hyperedge_weights::Vector{T}
+    ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
+
+    shortest_hyperpath_kk_heuristic(
+        hg::DirectedHypergraph{T, V, E, D},
+        sources::Set{Int},
+        targets::Set{Int},
+        cost_function::Function,
+        hyperedge_weights::Vector{T}
+    ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
+
+    Implements the heuristic directed hypergraph pathfinding algorithm of Krieger & Kececioglu (2022),
+    DOI: 10.1186/s13015-022-00217-9. This algorithm is not guaranteed to find the optimal pathway from `source` to
+    `target` based on some `cost_function` (which must take in the hypergraph `hg`, the current `state`, and some
+    pathway (collection of hyperedge)), but in practice, it produces the optimal pathway approximately 99% of the time.
+    
+    Note that, ostensibly, this algorithm only works for single-source, single-sink pathfinding (i.e., with a single
+    `source` and a single `target`). If the user provides multiple `sources` and/or multiple `targets`, the
+    multi-source/multi-sink problem will be reformulated as a single-source, single-sink problem by adding a
+    *metasource* vertex (connected to all source vertices by a single, 0-cost hyperedge) and/or *metatarget* vertex
+    (connected to all target vertices by a single, 0-cost hyperedge).
 """
 function shortest_hyperpath_kk_heuristic(
     hg::H,
@@ -167,7 +251,7 @@ function shortest_hyperpath_kk_heuristic(
         e = pop!(Hmin)
         state.removed_hes[e] = true
 
-        path = short_hyperpath_vhe(hg, source, e)
+        path = short_hyperpath_vhe(hg, source, e, state)
         # TODO: nature of cost function for hyperedge vs. cost function for path
         state.edge_costs[e] = cost_function(hg, state, path)
 
@@ -189,9 +273,9 @@ function shortest_hyperpath_kk_heuristic(
         for f in out_edges
             push!(state.he_inedges[f], e)
             if !isnothing(state.edge_heap_points[f]) && !state.removed_hes[f]
-                update!(Hmin, state.edge_heap_points[f], cost_function(hg, state, short_hyperpath_vhe(hg, source, f)))
+                update!(Hmin, state.edge_heap_points[f], cost_function(hg, state, short_hyperpath_vhe(hg, source, f, state)))
             elseif isnothing(state.edge_heap_points[f]) && state.hes_tail_count[f] == 0
-                state.edge_heap_points[f] = push!(Hmin, cost_function(hg, state, short_hyperpath_vhe(hg, source, f)))
+                state.edge_heap_points[f] = push!(Hmin, cost_function(hg, state, short_hyperpath_vhe(hg, source, f, state)))
             end
         end
     end
@@ -200,7 +284,7 @@ function shortest_hyperpath_kk_heuristic(
     cost = typemax(T)
     for in_e in keys(hg.hg_head.v2he[target])
         if !isnothing(state.edge_heap_points[in_e])
-            p = short_hyperpath_vhe(hg, source, in_e)
+            p = short_hyperpath_vhe(hg, source, in_e, state)
             cost_p = cost_function(hg, state, p)
             if cost_p < cost
                 path = p
@@ -360,7 +444,7 @@ function short_hyperpath_vhe(
         hg_copy[:, e] .= nothing
 
         # Only if hyperedge is essential for reaching target,
-        if !is_reachable(hg_copy, s, he, state)
+        if !is_reachable(hg_copy, v, he, state)
             # Restore hyperedge to hypergraph copy
             hg_copy[:, e] .= hg[:, e]
             push!(path, e)
@@ -548,13 +632,76 @@ function all_hyperpaths(hg::H, source::Int, target::Int) where {H <: AbstractDir
 end
 
 function all_hyperpaths(hg::H, source::Int, targets::Set{Int}) where {H <: AbstractDirectedHypergraph}
-    # TODO: you are here
+    hg_copy = deepcopy(hg)
+
+    # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
+    # The hyperedge from the targets to the metatarget will have a cost of 0 associated with it
+    metatarget = add_vertex!(hg_copy)
+    meta_he = add_hyperedge!(
+        hg_copy;
+        vertices_tail=D( x => convert(T, 0) for x in targets),
+        vertices_head=D(metatarget, convert(T, 0))
+    )
+
+    paths = all_hyperpaths(
+        hg_copy,
+        source,
+        metatarget,
+    )
+
+    # Remove the fictitious hyperedge from the targets to the metatarget
+    return Set(setdiff(p, Set{Int}(meta_he)) for p in paths)
 end
 
 function all_hyperpaths(hg::H, sources::Set{Int}, target::Int) where {H <: AbstractDirectedHypergraph}
+    hg_copy = deepcopy(hg)
 
+    # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
+    # The hyperedge from the metasource to the sources will have a cost of 0 associated with it
+    metasource = add_vertex!(hg_copy)
+    meta_he = add_hyperedge!(
+        hg_copy;
+        vertices_tail=D(metasource, convert(T, 0)),
+        vertices_head=D( x => convert(T, 0) for x in sources)
+    )
+
+    paths = all_hyperpaths(
+        hg_copy,
+        metasource,
+        target,
+    )
+
+    # Remove the fictitious hyperedge from the metasource to the sources
+    return Set(setdiff(p, Set{Int}(meta_he)) for p in paths)
 end
 
 function all_hyperpaths(hg::H, sources::Set{Int}, targets::Set{Int}) where {H <: AbstractDirectedHypergraph}
+    hg_copy = deepcopy(hg)
 
+    # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
+    # The hyperedge from the metasource to the sources will have a cost of 0 associated with it
+    metasource = add_vertex!(hg_copy)
+    meta_he_source = add_hyperedge!(
+        hg_copy;
+        vertices_tail=D(metasource, convert(T, 0)),
+        vertices_head=D( x => convert(T, 0) for x in sources)
+    )
+
+    # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
+    # The hyperedge from the targets to the metatarget will have a cost of 0 associated with it
+    metatarget = add_vertex!(hg_copy)
+    meta_he_target = add_hyperedge!(
+        hg_copy;
+        vertices_tail=D( x => convert(T, 0) for x in targets),
+        vertices_head=D(metatarget, convert(T, 0))
+    )
+
+    paths = all_hyperpaths(
+        hg_copy,
+        metasource,
+        metatarget,
+    )
+
+    # Remove fictitious hyperedges
+    return Set(setdiff(p, Set{Int}([meta_he_source, meta_he_target])) for p in paths)
 end
