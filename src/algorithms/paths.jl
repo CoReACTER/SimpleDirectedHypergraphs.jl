@@ -1,5 +1,3 @@
-# TODO: weights (default vector of 1.0 of length nve(hg))
-
 """
     struct DiHyperPathState{T}(
         reached_vs::BitVector,
@@ -76,7 +74,10 @@ end
         state::DiHyperPathState{T}
     ) where {H <: AbstractDirectedHypergraph, T <: Real}
 
+    Traverses a hypergraph `hg` starting from vertex with index `source` to determine all other vertices and hyperedges
+    that are reachable, following hyperedges along their forward direction (i.e., from tail to head).
 
+    `DiHyperPathState` `state` is used to track what vertices/hyperedges have been traversed.
 """
 function forward_reachable(
     hg::H,
@@ -127,9 +128,22 @@ function forward_reachable(
 end
 
 """
+    backward_traceable(
+        hg::H,
+        target::Int,
+        state::DiHyperPathState{T}
+    ) where {H <: AbstractDirectedHypergraph, T <: Real}
 
+    Traverses a hypergraph `hg` starting from vertex with index `target` to determine all other vertices and hyperedges
+    that are reachable, following hyperedges along their reverse direction (i.e., from head to tail).
+
+    `DiHyperPathState` `state` is used to track what vertices/hyperedges have been traversed.
 """
-function backward_traceable(hg::H, target::Int, state::DiHyperPathState{T}) where {H <: AbstractDirectedHypergraph, T <: Real}
+function backward_traceable(
+    hg::H,
+    target::Int,
+    state::DiHyperPathState{T}
+) where {H <: AbstractDirectedHypergraph, T <: Real}
     # Priority queue of reached vertices
     Q = Queue{Int}()
     enqueue!(Q, target)
@@ -396,7 +410,17 @@ function shortest_hyperpath_kk_heuristic(
 end
 
 """
+    short_hyperpath_vhe(
+        hg::H,
+        v::Int,
+        he::Int,
+        state::DiHyperPathState{T}
+    ) where {H <: AbstractDirectedHypergraph, T <: Real}
 
+    Obtain a (relatively, but not necessarily optimally) short hyperpath in hypergraph `hg` from a vertex `v` to a
+    hyperedge `he`, using `state` to track the hypergraph traversal during pathfinding. `short_hyperpath_vhe` uses a
+    greedy algorithm to first select hyperedges for a superpath and then prune unnecessary hyperedges to achieve a
+    (generally shorter) hyperpath. 
 """
 function short_hyperpath_vhe(
     hg::H,
@@ -455,7 +479,16 @@ function short_hyperpath_vhe(
 end
 
 """
+    is_reachable(
+        hg::H,
+        source_v::Int,
+        target_he::Int,
+        state::DiHyperPathState{T}
+    ) where {H <: AbstractDirectedHypergraph, T <: Real}
 
+    A short-circuiting version of `forward_reachable` that returns `true` if a hyperpath in hypergraph `hg` exists from
+    a source vertex with index `source_v` to a target hyperedge with index `target_he`. A `DiHyperPathState` object
+    `state` is used to keep track of what vertices and hyperedges have been visited during a traversal.
 """
 function is_reachable(
     hg::H,
@@ -509,7 +542,16 @@ function is_reachable(
 end
 
 """
+    is_reachable(
+        hg::H,
+        source_v::Int,
+        target_v::Int,
+        state::DiHyperPathState{T}
+    ) where {H <: AbstractDirectedHypergraph, T <: Real}
 
+    A short-circuiting version of `forward_reachable` that returns `true` if a hyperpath in hypergraph `hg` exists from
+    a source vertex with index `source_v` to a target vertex with index `target_v`. A `DiHyperPathState` object
+    `state` is used to keep track of what vertices and hyperedges have been visited during a traversal.
 """
 function is_reachable(
     hg::H,
@@ -564,7 +606,10 @@ function is_reachable(
 end
 
 """
+    get_hyperpath(hg::H, source::Int, target::Int, out::Set{Int}) where {H <: AbstractDirectedHypergraph}
 
+    If one exists, obtain a hyperpath in directed hypergraph `hg` from a source vertex with index `source` to a target
+    vertex with index `target`. The hyperpath cannot include any hyperedge with index included in the set `out`.
 """
 function get_hyperpath(hg::H, source::Int, target::Int, out::Set{Int}) where {H <: AbstractDirectedHypergraph}
     # Remove excluded hyperedges
@@ -599,7 +644,22 @@ function get_hyperpath(hg::H, source::Int, target::Int, out::Set{Int}) where {H 
 end
 
 """
+    all_hyperpaths(hg::H, source::Int, target::Int) where {H <: AbstractDirectedHypergraph}
 
+    all_hyperpaths(hg::H, source::Int, targets::Set{Int}) where {H <: AbstractDirectedHypergraph}
+
+    all_hyperpaths(hg::H, sources::Set{Int}, target::Int) where {H <: AbstractDirectedHypergraph}    
+
+    all_hyperpaths(hg::H, sources::Set{Int}, targets::Set{Int}) where {H <: AbstractDirectedHypergraph}
+
+    Exhaustively (but efficiently) generate all hyperpaths in directed hypergraph `hg` from some source(s) to some
+    target(s), using the algorithm described by Krieger & Kececioglu (2022), DOI: 10.1186/s13015-022-00217-9. 
+    
+    Note that, ostensibly, this algorithm only works for single-source, single-sink pathfinding (i.e., with a single
+    `source` index and a single `target` index). If the user provides multiple `sources` and/or multiple `targets`, the
+    multi-source/multi-sink problem will be reformulated as a single-source, single-sink problem by adding a
+    *metasource* vertex (connected to all source vertices by a single hyperedge) and/or *metatarget* vertex
+    (connected to all target vertices by a single hyperedge).
 """
 function all_hyperpaths(hg::H, source::Int, target::Int) where {H <: AbstractDirectedHypergraph}
     # Queue of subproblems
