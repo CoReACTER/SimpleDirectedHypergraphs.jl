@@ -179,3 +179,5 @@ end
 
 Graphs.SimpleGraphs.fadj(b::BipartiteView{H}, v::Integer) where {H<:AbstractDirectedHypergraph} = Graphs.outneighbors(b,v)
 Graphs.SimpleGraphs.badj(b::BipartiteView{H}, v::Integer) where {H<:AbstractDirectedHypergraph} = Graphs.inneighbors(b,v)
+
+# TODO: has_cycles

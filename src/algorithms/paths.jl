@@ -765,3 +765,215 @@ function all_hyperpaths(hg::H, sources::Set{Int}, targets::Set{Int}) where {H <:
     # Remove fictitious hyperedges
     return Set(setdiff(p, Set{Int}([meta_he_source, meta_he_target])) for p in paths)
 end
+
+function initialize_ilp_model(
+    hg::H,
+    source::Int,
+    target::Int,
+    cost_function::Function,
+    hyperedge_weights::Vector{T}) where {H<:AbstractDirectedHypergraph, T<:Real}
+
+    # Initialize state
+    state = initialize_dihyperpath_state(hg, hyperedge_weights)
+    
+    # First, verify that the problem is well-posed
+    # That is, can `target` be reached from `source`
+    @assert is_reachable(hg, source, target, state)
+
+    # Initialize integer linear programming model
+    model = Model(GLPK.Optimizer)
+    
+    # Create one binary variable for each hyperedge in `hg`
+    @variable(model, x[1:nhe(hg)], Bin)
+    set_start_value.(x, 1)
+
+    # Verify that all variables are bound to be either 0 (not present in hyperpath) or 1 (present in hyperpath)
+    @assert all(is_binary.(x))
+
+    # Define initial constraints
+    for i in 1:nhe(hg)
+        # Tail-covering inequalities
+        for v in keys(hg.hg_tail.he2v[i])
+            if v == source
+                continue
+            end
+
+            in_hes = collect(keys(hg.hg_head.v2he[v]))
+            @constraint(model, con_scalar, sum([x[ih] for ih in in_hes]) >= x[i])
+        end
+
+        # Head-hitting inequalities
+        if target ∉ hg.hg_head.he2v[i]
+            hits = Int[]
+            for j in 1:nhe(hg)
+                if i != j && length(intersect(Set(keys(hg.hg_head.he2v[i])), Set(keys(hg.hg_tail.he2v[j])))) >= 1
+                    push!(hits, j)
+                end
+            end
+
+            @constraint(model, con_scalar, sum([x[j] for j in hits]) >= x[i])
+        end
+    end
+
+    # Target-production inequality
+    @constraint(model, con_scalar, sum([x[e] for e in keys(hg.hg_head.v2he[target])]) >= 1)
+
+    # Distance-based inequalities
+    dist_ests = fill(typemax(T), nhv(hg))
+    for v in forward_reachable(hg, source, state)[1]
+        # TODO: this is inefficient
+        # Currently, will repeat a lot of work
+        dist_ests[v] = cost_function(
+            hg,
+            state,
+            shortest_hyperpath_kk_heuristic(hg, source, v, cost_function, hyperedge_weights)
+        )
+    end
+
+    cuts = Set{Int}[]
+    crosses = BitVector[]
+
+    for d in unique(values(dist_ests))
+        if d > dist_ests[target]
+            continue
+        end
+
+        # Construct an s,t-cut, where the source is within the cut set of vertices and the target is not in the set
+        cut_d = Set(v for (v, dist) in enumerate(dist_ests) if dist < d)
+        push!(cut_d, source)
+        setdiff!(cut_d, Set(target))
+
+        push!(cuts, cut_d)
+
+        cross = [
+            issubset(Set(keys(hg.hg_tail.he2v[i])), cut_d) && !issubset(Set(keys(hg.hg_head.he2v[i])), cut_d)
+            for i in 1:nhe(hg)
+        ]
+        push!(crosses, BitVector(cross))
+
+        @constraint(model, con_scalar, dot(x, cross) >= 1)
+    end
+
+    # Define objective function
+    @objective(model, Min, dot(x, state.edge_weights))
+
+    return model, x, cuts, crosses
+    
+end
+
+"""
+
+"""
+function shortest_hyperpath_kk_ilp(
+    hg::H,
+    source::Int,
+    target::Int,
+    cost_function::Function,
+    hyperedge_weights::Vector{T}
+) where {H<:AbstractDirectedHypergraph, T<:Real}
+
+    # TODO: do I need to carry `x` over like this? Not sure about variable scope
+    model, x, cuts, crosses = initialize_ilp_model(hg, source, target, cost_function, hyperedge_weights)
+
+    optimize!(model)
+    
+    # Convert floating-point solution into BitVector
+    # TODO: Is this necessary w/ JuMP? Or will the output really be binary? 
+    solution = value.(x) .> 0.5
+
+    # Check for s,t-cuts that are not crossed by the current solution
+    new_cuts, new_crosses = expand_cuts(hg, source, target, cuts, crosses, solution)
+
+    while length(new_cuts) > 0
+        # Add new constraints to the model
+        for cross in new_crosses
+            @constraint(model, con_scalar, dot(x, cross) >= 1)
+        end
+
+        # Re-optimize model with new cut-constraints
+        optimize!(model)
+        solution = value.(x) .> 0.5
+
+        new_cuts, new_crosses = expand_cuts(hg, source, target, new_cuts, new_crosses, solution)
+    end
+
+    return Set(findall(solution))
+end
+
+# TODO: alternates of the above with multiple sources and/or targets
+
+"""
+
+"""
+function expand_cuts(
+    hg::H,
+    source::Int,
+    target::Int,
+    cuts::Vector{Set{Int}},
+    crosses::Vector{BitVector},
+    curr_sol::BitVector
+)
+    new_cuts = Set{Int}[]
+    new_crosses = BitVector[]
+
+    for (old_cut, old_cross) in zip(cuts, crosses)
+        # Source augmentation
+        new_cut = old_cut
+        new_cross = old_cross
+        for e in 1:nhe(hg)
+            # If `e` is an active hyperedge that crosses the current cut, add the head of `e` to the cut so `e` no
+            # longer crosses it
+            if curr_sol[e] && new_cross[e]
+                new_cut = union(new_cut, Set(keys(hg.hg_head.he2v[e])))
+                new_cross = [
+                    issubset(Set(keys(hg.hg_tail.he2v[i])), new_cut) && !issubset(Set(keys(hg.hg_head.he2v[i])), new_cut)
+                    for i in 1:nhe(hg)
+                ]
+            end
+        end
+        
+        # If this is a valid s,t-cut that no active hyperedges cross, add it to the new cut list
+        if !(any(new_cross) || target ∈ new_cut)
+            push!(new_cuts, new_cut)
+            push!(new_crosses, new_cross)
+        end
+
+        # Sink augmentation
+        # TODO: you could (should) combine these two into one loop
+        new_cut = old_cut
+        new_cross = old_cross
+        while any(curr_sol .&& new_cross)
+            for e in 1:nhe(hg)
+                # If `e` is an active hyperedge that crosses the current cut, remove vertices from the tail of `e` to the
+                # cut so `e` no longer crosses it
+                if curr_sol[e] && new_cross[e]
+                    # Greedily pick the vertex in the tail of `e` that causes the fewest hyperedges to newly cross this cut
+                    new_cut_ev = Dict{Int, Set{Int}}()
+                    new_cross_ev = Dict{Int, Vector{Bool}}()
+                    for v in keys(hg.hg_tail.he2v[e])
+                        new_cut_ev[v] = setdiff(new_cut, Set(v))
+                        new_cross_ev[v] = [
+                            issubset(Set(keys(hg.hg_tail.he2v[i])), new_cut_ev[v]) &&
+                            !issubset(Set(keys(hg.hg_head.he2v[i])), new_cut_ev[v])
+                            for i in 1:nhe(hg)
+                        ]
+                    end
+
+                    greedy_v = minimum(q -> length(findall(!old_cross .&& new_cross_ev[q])), keys(new_cross_ev))
+
+                    new_cut = new_cut_ev[greedy_v]
+                    new_cross = new_cross_ev[greedy_v]
+                end
+            end
+        end
+
+        # If this is still a valid s,t-cut
+        if !any(new_corss) && source ∈ new_cut
+            push!(new_cuts, new_cut)
+            push!(new_crosses, new_cross)
+        end
+
+    end
+
+    return new_cuts, new_crosses
+end

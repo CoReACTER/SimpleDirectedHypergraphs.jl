@@ -10,6 +10,8 @@ using Random
 using LinearAlgebra
 using SimpleTraits
 using InvertedIndices
+using JuMP
+import GLPK
 
 export AbstractDirectedHypergraph
 export DirectedHypergraph, HyperedgeDirection
