@@ -191,7 +191,6 @@ end
         hg::H,
         source::Int,
         target::Int,
-        cost_function::Function,
         hyperedge_weights::Vector{T}
     ) where {H <: AbstractDirectedHypergraph, T <: Real}
 
@@ -199,7 +198,6 @@ end
         hg::DirectedHypergraph{T, V, E, D},
         source::Int,
         targets::Set{Int},
-        cost_function::Function,
         hyperedge_weights::Vector{T}
     ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
 
@@ -207,7 +205,6 @@ end
         hg::DirectedHypergraph{T, V, E, D},
         sources::Set{Int},
         target::Int,
-        cost_function::Function,
         hyperedge_weights::Vector{T}
     ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
 
@@ -215,14 +212,13 @@ end
         hg::DirectedHypergraph{T, V, E, D},
         sources::Set{Int},
         targets::Set{Int},
-        cost_function::Function,
         hyperedge_weights::Vector{T}
     ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
 
     Implements the heuristic directed hypergraph pathfinding algorithm of Krieger & Kececioglu (2022),
     DOI: 10.1186/s13015-022-00217-9. This algorithm is not guaranteed to find the optimal pathway from `source` to
-    `target` based on some `cost_function` (which must take in the hypergraph `hg`, the current `state`, and some
-    pathway (collection of hyperedge)), but in practice, it produces the optimal pathway approximately 99% of the time.
+    `target` based on some nonnegative `hyperedge_weights`), but in practice, it produces the optimal pathway
+    approximately 99% of the time.
     
     Note that, ostensibly, this algorithm only works for single-source, single-sink pathfinding (i.e., with a single
     `source` and a single `target`). If the user provides multiple `sources` and/or multiple `targets`, the
@@ -234,7 +230,6 @@ function shortest_hyperpath_kk_heuristic(
     hg::H,
     source::Int,
     target::Int,
-    cost_function::Function,
     hyperedge_weights::Vector{T}
 ) where {H <: AbstractDirectedHypergraph, T <: Real}
     state = initialize_dihyperpath_state(hg, hyperedge_weights)
@@ -255,7 +250,7 @@ function shortest_hyperpath_kk_heuristic(
         # If only the source is needed for this hyperedge
         if length(hg.hg_tail.he2v[out_e]) == 1
             # TODO: what do cost functions need?
-            state.edge_heap_points[out_e] = push!(Hmin, cost_function(hg, state, out_e))
+            state.edge_heap_points[out_e] = push!(Hmin, state.edge_weights[out_e])
         end
     end
 
@@ -267,7 +262,7 @@ function shortest_hyperpath_kk_heuristic(
 
         path = short_hyperpath_vhe(hg, source, e, state)
         # TODO: nature of cost function for hyperedge vs. cost function for path
-        state.edge_costs[e] = cost_function(hg, state, path)
+        state.edge_costs[e] = sum(state.edge_weights[x] for x in path)
 
         out_edges = Set{Int}()
         for v in keys(hg.hg_head.he2v[e])
@@ -287,9 +282,15 @@ function shortest_hyperpath_kk_heuristic(
         for f in out_edges
             push!(state.he_inedges[f], e)
             if !isnothing(state.edge_heap_points[f]) && !state.removed_hes[f]
-                update!(Hmin, state.edge_heap_points[f], cost_function(hg, state, short_hyperpath_vhe(hg, source, f, state)))
+                update!(
+                    Hmin,
+                    state.edge_heap_points[f],
+                    sum(state.edge_weights[x] for x in short_hyperpath_vhe(hg, source, f, state))
+                )
             elseif isnothing(state.edge_heap_points[f]) && state.hes_tail_count[f] == 0
-                state.edge_heap_points[f] = push!(Hmin, cost_function(hg, state, short_hyperpath_vhe(hg, source, f, state)))
+                state.edge_heap_points[f] = push!(
+                    Hmin,
+                    sum(state.edge_weights[x] for x in short_hyperpath_vhe(hg, source, f, state))
             end
         end
     end
@@ -299,7 +300,7 @@ function shortest_hyperpath_kk_heuristic(
     for in_e in keys(hg.hg_head.v2he[target])
         if !isnothing(state.edge_heap_points[in_e])
             p = short_hyperpath_vhe(hg, source, in_e, state)
-            cost_p = cost_function(hg, state, p)
+            cost_p = sum(state.edge_weights[e] for e in p)
             if cost_p < cost
                 path = p
                 cost = cost_p
@@ -314,7 +315,6 @@ function shortest_hyperpath_kk_heuristic(
     hg::DirectedHypergraph{T, V, E, D},
     source::Int,
     targets::Set{Int},
-    cost_function::Function,
     hyperedge_weights::Vector{T}
 ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
@@ -332,7 +332,6 @@ function shortest_hyperpath_kk_heuristic(
         hg_copy,
         source,
         metatarget,
-        cost_function,
         vcat(hyperedge_weights, convert(T, 0))
     )
 
@@ -344,7 +343,6 @@ function shortest_hyperpath_kk_heuristic(
     hg::DirectedHypergraph{T, V, E, D},
     sources::Set{Int},
     target::Int,
-    cost_function::Function,
     hyperedge_weights::Vector{T}
 ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
@@ -362,7 +360,6 @@ function shortest_hyperpath_kk_heuristic(
         hg_copy,
         metasource,
         target,
-        cost_function,
         vcat(hyperedge_weights, convert(T, 0))
     )
 
@@ -374,7 +371,6 @@ function shortest_hyperpath_kk_heuristic(
     hg::DirectedHypergraph{T, V, E, D},
     sources::Set{Int},
     targets::Set{Int},
-    cost_function::Function,
     hyperedge_weights::Vector{T}
 ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
@@ -401,7 +397,6 @@ function shortest_hyperpath_kk_heuristic(
         hg_copy,
         metasource,
         metatarget,
-        cost_function,
         vcat(hyperedge_weights, [convert(T, 0), convert(T, 0)])
     )
 
@@ -770,7 +765,6 @@ function initialize_ilp_model(
     hg::H,
     source::Int,
     target::Int,
-    cost_function::Function,
     hyperedge_weights::Vector{T}) where {H<:AbstractDirectedHypergraph, T<:Real}
 
     # Initialize state
@@ -823,10 +817,8 @@ function initialize_ilp_model(
     for v in forward_reachable(hg, source, state)[1]
         # TODO: this is inefficient
         # Currently, will repeat a lot of work
-        dist_ests[v] = cost_function(
-            hg,
-            state,
-            shortest_hyperpath_kk_heuristic(hg, source, v, cost_function, hyperedge_weights)
+        dist_ests[v] = sum(
+            state.edge_weights[e] for e in shortest_hyperpath_kk_heuristic(hg, source, v, hyperedge_weights)
         )
     end
 
@@ -866,7 +858,6 @@ end
         hg::H,
         source::Int,
         target::Int,
-        cost_function::Function,
         hyperedge_weights::Vector{T}
     ) where {H<:AbstractDirectedHypergraph, T<:Real}
 
@@ -874,7 +865,6 @@ end
         hg::H,
         source::Int,
         targets::Set{Int},
-        cost_function::Function,
         hyperedge_weights::Vector{T}
     ) where {H<:AbstractDirectedHypergraph, T<:Real}
 
@@ -882,7 +872,6 @@ end
         hg::H,
         sources::Set{Int},
         target::Int,
-        cost_function::Function,
         hyperedge_weights::Vector{T}
     ) where {H<:AbstractDirectedHypergraph, T<:Real}
 
@@ -890,14 +879,12 @@ end
         hg::H,
         sources::Set{Int},
         targets::Set{Int},
-        cost_function::Function,
         hyperedge_weights::Vector{T}
     ) where {H<:AbstractDirectedHypergraph, T<:Real}
 
     Implements the exact directed hypergraph pathfinding algorithm of Krieger & Kececioglu (2023),
     DOI: 10.1089/cmb.2023.0242. This algorithm is guaranteed to find the optimal pathway from `source` to
-    `target` based on some `cost_function` (which must take in the hypergraph `hg`, the current `state`, and some
-    pathway (collection of hyperedge)), if and only if such a path exists.
+    `target` based on some nonnegative `hyperedge_weights`, if and only if such a path exists.
 
     Note that, ostensibly, this algorithm only works for single-source, single-sink pathfinding (i.e., with a single
     `source` and a single `target`). If the user provides multiple `sources` and/or multiple `targets`, the
@@ -909,12 +896,11 @@ function shortest_hyperpath_kk_ilp(
     hg::H,
     source::Int,
     target::Int,
-    cost_function::Function,
     hyperedge_weights::Vector{T}
 ) where {H<:AbstractDirectedHypergraph, T<:Real}
 
     # TODO: do I need to carry `x` over like this? Not sure about variable scope
-    model, x, cuts, crosses = initialize_ilp_model(hg, source, target, cost_function, hyperedge_weights)
+    model, x, cuts, crosses = initialize_ilp_model(hg, source, target, hyperedge_weights)
 
     optimize!(model)
     
@@ -945,7 +931,6 @@ function shortest_hyperpath_kk_ilp(
     hg::H,
     source::Int,
     targets::Set{Int},
-    cost_function::Function,
     hyperedge_weights::Vector{T}
 ) where {H<:AbstractDirectedHypergraph, T<:Real}
     hg_copy = deepcopy(hg)
@@ -963,7 +948,6 @@ function shortest_hyperpath_kk_ilp(
         hg_copy,
         source,
         metatarget,
-        cost_function,
         hyperedge_weights
     )
 
@@ -975,7 +959,6 @@ function shortest_hyperpath_kk_ilp(
     hg::H,
     sources::Set{Int},
     target::Int,
-    cost_function::Function,
     hyperedge_weights::Vector{T}
 ) where {H<:AbstractDirectedHypergraph, T<:Real}
     hg_copy = deepcopy(hg)
@@ -993,7 +976,6 @@ function shortest_hyperpath_kk_ilp(
         hg_copy,
         metasource,
         target,
-        cost_function,
         vcat(hyperedge_weights, convert(T, 0))
     )
 
@@ -1005,7 +987,6 @@ function shortest_hyperpath_kk_ilp(
     hg::H,
     sources::Set{Int},
     targets::Set{Int},
-    cost_function::Function,
     hyperedge_weights::Vector{T}
 ) where {H<:AbstractDirectedHypergraph, T<:Real}
     hg_copy = deepcopy(hg)
@@ -1032,7 +1013,6 @@ function shortest_hyperpath_kk_ilp(
         hg_copy,
         metasource,
         metatarget,
-        cost_function,
         vcat(hyperedge_weights, [convert(T, 0), convert(T, 0)])
     )
 

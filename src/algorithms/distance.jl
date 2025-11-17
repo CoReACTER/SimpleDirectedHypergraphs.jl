@@ -1,5 +1,5 @@
 """
-    struct SnodeDistanceKKHeuristic(sources::Vector{Int}, targets::Vector{Int}) <: AbstractDistance
+    struct SnodeDistanceKKHeuristic(sources::Set{Int}, targets::Set{Int}) <: AbstractDistance
 
 Represent a distance between a set of *source* nodes and a set of *target* nodes in a of directed hypergraph `h`,
 where a distance in this context is defined as the length of the shortest hyperpath that reaches all `t ∈ targets`.
@@ -15,7 +15,7 @@ struct SnodeDistanceKKHeuristic <: AbstractDistance
 end
 
 """
-    struct SnodeDistanceKKExact(sources::Vector{Int}, targets::Vector{Int}) <: AbstractDistance
+    struct SnodeDistanceKKILP(sources::Set{Int}, targets::Set{Int}) <: AbstractDistance
 
 Represent a distance between a set of *source* nodes and a set of *target* nodes in a of directed hypergraph `h`,
 where a distance in this context is defined as the length of the shortest hyperpath that reaches all `t ∈ targets`.
@@ -25,7 +25,18 @@ The Krieger & Kececioglu algorithm solves an integer linear programming formalis
 
 For a lower-cost heuristic algorith, see `SnodeDistanceKKHeuristic`.
 """
-struct SnodeDistanceKKExact <: AbstractDistance
+struct SnodeDistanceKKILP <: AbstractDistance
     sources::Set{Int}
     targets::Set{Int}
+end
+
+function SimpleHypergraphs.distance(
+    h::H,
+    distance_method::SnodeDistanceKKHeuristic,
+    cost_function::Function,
+    hyperedge_weights::Vector{T}
+) where {H <: AbstractDirectedHypergraph}
+
+    return cost_function()
+
 end
