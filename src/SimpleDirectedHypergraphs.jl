@@ -26,6 +26,8 @@ export get_weakly_connected_components, get_strongly_connected_components
 export DiHyperPathState, initialize_dihyperpath_state, forward_reachable, backward_traceable, is_reachable
 export all_hyperpaths, shortest_hyperpath_kk_heuristic, initialize_ilp_model, shortest_hyperpath_kk_ilp
 
+export SnodeDistanceKKHeuristic, SnodeDistanceKKILP
+
 include("abstracttypes.jl")
 include("dihypergraph.jl")
 include("io.jl")
@@ -36,5 +38,6 @@ include("models/random-models.jl")
 include("models/dual.jl")
 
 include("algorithms/paths.jl")
+include("algorithms/distance.jl")
 
 end # module

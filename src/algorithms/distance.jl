@@ -1,5 +1,5 @@
 """
-    struct SnodeDistanceKKHeuristic(sources::Set{Int}, targets::Set{Int}) <: AbstractDistance
+    SnodeDistanceKKHeuristic(sources::Set{Int}, targets::Set{Int}) <: AbstractDistance
 
 Represent a distance between a set of *source* nodes and a set of *target* nodes in a of directed hypergraph `h`,
 where a distance in this context is defined as the length of the shortest hyperpath that reaches all `t ∈ targets`.
@@ -15,7 +15,7 @@ struct SnodeDistanceKKHeuristic <: AbstractDistance
 end
 
 """
-    struct SnodeDistanceKKILP(sources::Set{Int}, targets::Set{Int}) <: AbstractDistance
+    SnodeDistanceKKILP(sources::Set{Int}, targets::Set{Int}) <: AbstractDistance
 
 Represent a distance between a set of *source* nodes and a set of *target* nodes in a of directed hypergraph `h`,
 where a distance in this context is defined as the length of the shortest hyperpath that reaches all `t ∈ targets`.
@@ -31,7 +31,7 @@ struct SnodeDistanceKKILP <: AbstractDistance
 end
 
 """
-    SimpleHypergraphs.distance(
+    distance(
         hg::H,
         distance_method::SnodeDistanceKKHeuristic,
         hyperedge_weights::AbstractVector{T};
@@ -70,7 +70,7 @@ function SimpleHypergraphs.distance(
 end
 
 """
-    SimpleHypergraphs.distance(
+    distance(
         hg::H,
         distance_method::SnodeDistanceKKHeuristic,
         hyperedge_weights::AbstractVector{T}
