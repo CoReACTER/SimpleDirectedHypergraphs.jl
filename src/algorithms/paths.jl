@@ -862,7 +862,48 @@ function initialize_ilp_model(
 end
 
 """
+    shortest_hyperpath_kk_ilp(
+        hg::H,
+        source::Int,
+        target::Int,
+        cost_function::Function,
+        hyperedge_weights::Vector{T}
+    ) where {H<:AbstractDirectedHypergraph, T<:Real}
 
+    shortest_hyperpath_kk_ilp(
+        hg::H,
+        source::Int,
+        targets::Set{Int},
+        cost_function::Function,
+        hyperedge_weights::Vector{T}
+    ) where {H<:AbstractDirectedHypergraph, T<:Real}
+
+    shortest_hyperpath_kk_ilp(
+        hg::H,
+        sources::Set{Int},
+        target::Int,
+        cost_function::Function,
+        hyperedge_weights::Vector{T}
+    ) where {H<:AbstractDirectedHypergraph, T<:Real}
+
+    shortest_hyperpath_kk_ilp(
+        hg::H,
+        sources::Set{Int},
+        targets::Set{Int},
+        cost_function::Function,
+        hyperedge_weights::Vector{T}
+    ) where {H<:AbstractDirectedHypergraph, T<:Real}
+
+    Implements the exact directed hypergraph pathfinding algorithm of Krieger & Kececioglu (2023),
+    DOI: 10.1089/cmb.2023.0242. This algorithm is guaranteed to find the optimal pathway from `source` to
+    `target` based on some `cost_function` (which must take in the hypergraph `hg`, the current `state`, and some
+    pathway (collection of hyperedge)), if and only if such a path exists.
+
+    Note that, ostensibly, this algorithm only works for single-source, single-sink pathfinding (i.e., with a single
+    `source` and a single `target`). If the user provides multiple `sources` and/or multiple `targets`, the
+    multi-source/multi-sink problem will be reformulated as a single-source, single-sink problem by adding a
+    *metasource* vertex (connected to all source vertices by a single, 0-cost hyperedge) and/or *metatarget* vertex
+    (connected to all target vertices by a single, 0-cost hyperedge).
 """
 function shortest_hyperpath_kk_ilp(
     hg::H,
@@ -900,10 +941,119 @@ function shortest_hyperpath_kk_ilp(
     return Set(findall(solution))
 end
 
-# TODO: alternates of the above with multiple sources and/or targets
+function shortest_hyperpath_kk_ilp(
+    hg::H,
+    source::Int,
+    targets::Set{Int},
+    cost_function::Function,
+    hyperedge_weights::Vector{T}
+) where {H<:AbstractDirectedHypergraph, T<:Real}
+    hg_copy = deepcopy(hg)
+
+    # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
+    # The hyperedge from the targets to the metatarget will have a cost of 0 associated with it
+    metatarget = add_vertex!(hg_copy)
+    meta_he = add_hyperedge!(
+        hg_copy;
+        vertices_tail=D( x => convert(T, 0) for x in targets),
+        vertices_head=D(metatarget, convert(T, 0))
+    )
+
+    path = shortest_hyperpath_kk_ilp(
+        hg_copy,
+        source,
+        metatarget,
+        cost_function,
+        hyperedge_weights
+    )
+
+    # Remove the fictitious hyperedge from the targets to the metatarget
+    return setdiff(path, Set{Int}(meta_he))
+end
+
+function shortest_hyperpath_kk_ilp(
+    hg::H,
+    sources::Set{Int},
+    target::Int,
+    cost_function::Function,
+    hyperedge_weights::Vector{T}
+) where {H<:AbstractDirectedHypergraph, T<:Real}
+    hg_copy = deepcopy(hg)
+
+    # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
+    # The hyperedge from the metasource to the sources will have a cost of 0 associated with it
+    metasource = add_vertex!(hg_copy)
+    meta_he = add_hyperedge!(
+        hg_copy;
+        vertices_tail=D(metasource, convert(T, 0)),
+        vertices_head=D( x => convert(T, 0) for x in sources)
+    )
+
+    path = shortest_hyperpath_kk_ilp(
+        hg_copy,
+        metasource,
+        target,
+        cost_function,
+        vcat(hyperedge_weights, convert(T, 0))
+    )
+
+    # Remove the fictitious hyperedge from the metasource to the sources
+    setdiff(path, Set{Int}(meta_he))
+end
+
+function shortest_hyperpath_kk_ilp(
+    hg::H,
+    sources::Set{Int},
+    targets::Set{Int},
+    cost_function::Function,
+    hyperedge_weights::Vector{T}
+) where {H<:AbstractDirectedHypergraph, T<:Real}
+    hg_copy = deepcopy(hg)
+
+    # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
+    # The hyperedge from the metasource to the sources will have a cost of 0 associated with it
+    metasource = add_vertex!(hg_copy)
+    meta_he_source = add_hyperedge!(
+        hg_copy;
+        vertices_tail=D(metasource, convert(T, 0)),
+        vertices_head=D( x => convert(T, 0) for x in sources)
+    )
+
+    # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
+    # The hyperedge from the targets to the metatarget will have a cost of 0 associated with it
+    metatarget = add_vertex!(hg_copy)
+    meta_he_target = add_hyperedge!(
+        hg_copy;
+        vertices_tail=D( x => convert(T, 0) for x in targets),
+        vertices_head=D(metatarget, convert(T, 0))
+    )
+
+    path = shortest_hyperpath_kk_ilp(
+        hg_copy,
+        metasource,
+        metatarget,
+        cost_function,
+        vcat(hyperedge_weights, [convert(T, 0), convert(T, 0)])
+    )
+
+    # Remove fictitious hyperedges
+    setdiff(path, Set{Int}([meta_he_source, meta_he_target]))
+end
 
 """
+    expand_cuts(
+        hg::H,
+        source::Int,
+        target::Int,
+        cuts::Vector{Set{Int}},
+        crosses::Vector{BitVector},
+        curr_sol::BitVector
+    ) where {H <: AbstractDirectedHypergraph}
 
+    A helper function for `shortest_hyperpath_kk_ilp`
+
+    Efficiently identify new `source`-`target` cuts of a directed hypergraph `hg` that are violated by current solution
+    of the integer linear programming problem `curr_sol`.
 """
 function expand_cuts(
     hg::H,
@@ -912,7 +1062,7 @@ function expand_cuts(
     cuts::Vector{Set{Int}},
     crosses::Vector{BitVector},
     curr_sol::BitVector
-)
+) where {H <: AbstractDirectedHypergraph}
     new_cuts = Set{Int}[]
     new_crosses = BitVector[]
 
