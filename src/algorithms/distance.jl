@@ -30,13 +30,145 @@ struct SnodeDistanceKKILP <: AbstractDistance
     targets::Set{Int}
 end
 
+"""
+    SimpleHypergraphs.distance(
+        hg::H,
+        distance_method::SnodeDistanceKKHeuristic,
+        hyperedge_weights::AbstractVector{T};
+    ) where {H <: AbstractDirectedHypergraph, T <: Real}
+
+    Return the shortest distance between the `distance_method.sources` and the `distance_method.targets`,
+    assuming tha the cost (i.e., distance) between two vertices is the sum of the (nonnegative) `hyperedge_weights`
+    of the hyperedges in the shortest path between the two sets of vertices. If there is no path between the `sources`
+    and `targets`, returns `typemax(T)`.
+
+    Here, the heuristic directed hypergraph pathfinding algorithm of Krieger & Kececioglu (2022),
+    DOI: 10.1186/s13015-022-00217-9 is used to find the shortest path. This algorithm is not guaranteed to find the
+    optimal pathway, but in practice, it produces the optimal pathway approximately 99% of the time.
+"""
 function SimpleHypergraphs.distance(
-    h::H,
+    hg::H,
     distance_method::SnodeDistanceKKHeuristic,
-    cost_function::Function,
-    hyperedge_weights::Vector{T}
+    hyperedge_weights::AbstractVector{T}
+) where {H <: AbstractDirectedHypergraph, T <: Real}
+
+    path = shortest_hyperpath_kk_heuristic(
+        hg,
+        distance_method.sources,
+        distance_method.targets,
+        hyperedge_weights
+    )
+
+    if length(path) == 0
+        return typemax(T)
+    end
+
+    return sum(
+        hyperedge_weights[e]
+        for e in path
+    )
+end
+
+"""
+    SimpleHypergraphs.distance(
+        hg::H,
+        distance_method::SnodeDistanceKKHeuristic,
+        hyperedge_weights::AbstractVector{T}
+    ) where {H <: AbstractDirectedHypergraph}
+
+    Return the shortest distance between the `distance_method.sources` and the `distance_method.targets`,
+    assuming tha the cost (i.e., distance) between two vertices is the sum of the (nonnegative) `hyperedge_weights`
+    of the hyperedges in the shortest path between the two sets of vertices. If there is no path between the `sources`
+    and `targets`, returns `typemax(T)`.
+
+    Here, the *exact* shortest hyperpath algorithm of Krieger & Kececioglu 2023 (DOI: 10.1089/cmb.2023.0242) is used.
+    The Krieger & Kececioglu algorithm solves an integer linear programming formalism related to hypergraph cutting.
+
+"""
+function SimpleHypergraphs.distance(
+    hg::H,
+    distance_method::SnodeDistanceKKILP,
+    hyperedge_weights::AbstractVector{T}
 ) where {H <: AbstractDirectedHypergraph}
 
-    return cost_function()
+    path = shortest_hyperpath_kk_ilp(
+        hg,
+        distance_method.sources,
+        distance_method.targets,
+        hyperedge_weights
+    )
 
+    if length(path) == 0
+        return typemax(T)
+    end
+
+    return sum(
+        hyperedge_weights[e]
+        for e in path
+    )
+end
+
+"""
+    diameter(
+        hg::H,
+        distance_method::SnodeDistanceKKHeuristic,
+    ) where {H <: AbstractSimpleHypergraph, T <: Real}
+
+    Return the diameter of a hypergraph `hg` (maximum number of hyperedges required to go between any two vertices)
+    based on Krieger & Kececioglu's heuristic algorithm (DOI: 10.1186/s13015-022-00217-9). If there exist some vertices
+    not reachable from other vertices (i.e., if `hg` is not strongly connected), then this will return `Inf`.
+"""
+function Graphs.diameter(
+    hg::H,
+    _::SnodeDistanceKKHeuristic,
+) where {H <: AbstractDirectedHypergraph}
+    if length(get_strongly_connected_components(hg)) != 1
+        return Inf64
+    end
+
+    # Since we're interested in the number of steps, assign each hyperedge a uniform weight of `1`
+    edge_weights = ones(Int, nhe(hg))
+
+    max_dist = 0
+    for i in 1:nhv(hg)
+        for j in i+1:nhv(hg)
+            dist = distance(hg, SnodeDistanceKKHeuristic(Set{Int}(i), Set{Int}(j)), edge_weights)
+            if dist > max_dist
+                max_dist = dist
+            end
+        end
+    end
+end
+
+"""
+    diameter(
+        hg::H,
+        distance_method::SnodeDistanceKKHeuristic,
+    ) where {H <: AbstractSimpleHypergraph, T <: Real}
+
+    Return the diameter of a hypergraph `hg` (maximum number of hyperedges required to go between any two vertices)
+    based on Krieger & Kececioglu's exact integer linear programming algorithm (DOI: 10.1089/cmb.2023.0242). If there
+    exist some vertices not reachable from other vertices (i.e., if `hg` is not strongly connected), then this will
+    return `Inf64`.
+"""
+function Graphs.diameter(
+    hg::H,
+    _::SnodeDistanceKKHeuristic,
+) where {H <: AbstractDirectedHypergraph}
+    if length(get_strongly_connected_components(hg)) != 1
+        return Inf64
+    end
+
+    # Since we're interested in the number of steps, assign each hyperedge a uniform weight of `1`
+    edge_weights = ones(Int64, nhe(hg))
+
+    max_dist = 0
+    for i in 1:nhv(hg)
+        for j in i+1:nhv(hg)
+            dist = distance(hg, SnodeDistanceKKILP(Set{Int}(i), Set{Int}(j)), edge_weights)
+            if dist > max_dist
+                max_dist = dist
+            end
+        end
+    end
 end

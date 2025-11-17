@@ -1037,5 +1037,5 @@ function get_strongly_connected_components(h::H) where {H <: AbstractDirectedHyp
         push!(T[bcc_sorted], v)
     end
 
-    [sort!(collect(v)) for (k, v) in T if length(v) != 0]
+    [sort!(collect(v)) for (_, v) in T if length(v) != 0]
 end
