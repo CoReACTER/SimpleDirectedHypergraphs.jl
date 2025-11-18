@@ -50,7 +50,7 @@ function SimpleHypergraphs.distance(
     hg::H,
     distance_method::SnodeDistanceKKHeuristic,
     hyperedge_weights::AbstractVector{T}
-) where {H <: AbstractDirectedHypergraph, T <: Real}
+) where {H<:AbstractDirectedHypergraph,T<:Real}
 
     path = shortest_hyperpath_kk_heuristic(
         hg,
@@ -89,7 +89,7 @@ function SimpleHypergraphs.distance(
     hg::H,
     distance_method::SnodeDistanceKKILP,
     hyperedge_weights::AbstractVector{T}
-) where {H <: AbstractDirectedHypergraph, T <: Real}
+) where {H<:AbstractDirectedHypergraph,T<:Real}
 
     path = shortest_hyperpath_kk_ilp(
         hg,
@@ -121,7 +121,7 @@ end
 function Graphs.diameter(
     hg::H,
     _::SnodeDistanceKKHeuristic,
-) where {H <: AbstractDirectedHypergraph}
+) where {H<:AbstractDirectedHypergraph}
     if length(get_strongly_connected_components(hg)) != 1
         return Inf64
     end
@@ -143,7 +143,7 @@ end
 """
     diameter(
         hg::H,
-        distance_method::SnodeDistanceKKHeuristic,
+        distance_method::f,
     ) where {H <: AbstractSimpleHypergraph, T <: Real}
 
     Return the diameter of a hypergraph `hg` (maximum number of hyperedges required to go between any two vertices)
@@ -153,8 +153,8 @@ end
 """
 function Graphs.diameter(
     hg::H,
-    _::SnodeDistanceKKHeuristic,
-) where {H <: AbstractDirectedHypergraph}
+    _::SnodeDistanceKKILP,
+) where {H<:AbstractDirectedHypergraph}
     if length(get_strongly_connected_components(hg)) != 1
         return Inf64
     end

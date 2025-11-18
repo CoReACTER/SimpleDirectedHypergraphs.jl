@@ -30,7 +30,7 @@ struct DiHyperPathState{T<:Real}
     he_inedges::Vector{Set{Int}}
     edge_weights::Vector{T}
     edge_costs::Vector{T}
-    edge_heap_points::Vector{Union{Nothing, Int}}
+    edge_heap_points::Vector{Union{Nothing,Int}}
 end
 
 """
@@ -43,22 +43,22 @@ end
     costs) `hyperedge_weights`.
 """
 function initialize_dihyperpath_state(
-        hg::H,
-        hyperedge_weights::Vector{T}
-    ) where {H <: AbstractDirectedHypergraph, T <: Real}
+    hg::H,
+    hyperedge_weights::Vector{T}
+) where {H<:AbstractDirectedHypergraph,T<:Real}
     # Hyperedge weights need to be nonnegative
     @assert all(hyperedge_weights .>= 0)
 
     nv = nhv(hg)
     ne = nhe(hg)
 
-    edge_heap_points = Vector{Union{Nothing, Int}}(undef, ne)
+    edge_heap_points = Vector{Union{Nothing,Int}}(undef, ne)
     edge_heap_points .= nothing
 
     return DiHyperPathState{T}(
-        BitVector(zeros(nv)),
-        BitVector(zeros(ne)),
-        BitVector(zeros(ne)),
+        BitVector(falses(nv)),
+        BitVector(falses(ne)),
+        BitVector(falses(ne)),
         length.(keys.(hg.hg_tail.he2v)),
         [Set{Int}() for _ in 1:ne],
         hyperedge_weights,
@@ -83,11 +83,11 @@ function forward_reachable(
     hg::H,
     source::Int,
     state::DiHyperPathState{T}
-) where {H <: AbstractDirectedHypergraph, T <: Real}
+) where {H<:AbstractDirectedHypergraph,T<:Real}
     # Priority queue of reached vertices
     Q = Queue{Int}()
     enqueue!(Q, source)
-    
+
     state.reached_vs[source] = true
 
     # Which vertices/hyperedges have been reached?
@@ -95,7 +95,7 @@ function forward_reachable(
     reached_es = Set{Int}()
 
     while length(Q) > 0
-        v = popfirst!(Q)
+        v = dequeue!(Q)
         push!(reached_vs, v)
 
         for out_e in keys(hg.hg_tail.v2he[v])
@@ -118,7 +118,7 @@ function forward_reachable(
     # Restore state
     for v in reached_vs
         state.reached_vs[v] = false
-        for out_e in hg.hg_tail.v2he[v]
+        for out_e in keys(hg.hg_tail.v2he[v])
             state.hes_tail_count[out_e] += 1
         end
     end
@@ -143,11 +143,11 @@ function backward_traceable(
     hg::H,
     target::Int,
     state::DiHyperPathState{T}
-) where {H <: AbstractDirectedHypergraph, T <: Real}
+) where {H<:AbstractDirectedHypergraph,T<:Real}
     # Priority queue of reached vertices
     Q = Queue{Int}()
     enqueue!(Q, target)
-    
+
     state.reached_vs[target] = true
 
     # Which vertices/hyperedges have been reached?
@@ -155,7 +155,7 @@ function backward_traceable(
     reached_es = Set{Int}()
 
     while length(Q) > 0
-        v = popfirst!(Q)
+        v = dequeue!(Q)
         push!(reached_vs, v)
 
         for in_e in keys(hg.hg_head.v2he[v])
@@ -231,7 +231,7 @@ function shortest_hyperpath_kk_heuristic(
     source::Int,
     target::Int,
     hyperedge_weights::Vector{T}
-) where {H <: AbstractDirectedHypergraph, T <: Real}
+) where {H<:AbstractDirectedHypergraph,T<:Real}
     state = initialize_dihyperpath_state(hg, hyperedge_weights)
 
     # Doubly reachable hyperedges
@@ -245,7 +245,7 @@ function shortest_hyperpath_kk_heuristic(
     hg_copy[:, Not(dr_hes)] .= nothing
 
     # Min-heap for hyperedges
-    Hmin = MutableBinaryMinHeap{Tuple{Int, T}}()
+    Hmin = MutableBinaryMinHeap{Tuple{Int,T}}()
     for out_e in keys(hg.hg_tail.v2he[source])
         # If only the source is needed for this hyperedge
         if length(hg.hg_tail.he2v[out_e]) == 1
@@ -313,11 +313,11 @@ function shortest_hyperpath_kk_heuristic(
 end
 
 function shortest_hyperpath_kk_heuristic(
-    hg::DirectedHypergraph{T, V, E, D},
+    hg::DirectedHypergraph{T,V,E,D},
     source::Int,
     targets::Set{Int},
     hyperedge_weights::Vector{T}
-) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
+) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -325,7 +325,7 @@ function shortest_hyperpath_kk_heuristic(
     metatarget = add_vertex!(hg_copy)
     meta_he = add_hyperedge!(
         hg_copy;
-        vertices_tail=D( x => convert(T, 0) for x in targets),
+        vertices_tail=D(x => convert(T, 0) for x in targets),
         vertices_head=D(metatarget, convert(T, 0))
     )
 
@@ -341,11 +341,11 @@ function shortest_hyperpath_kk_heuristic(
 end
 
 function shortest_hyperpath_kk_heuristic(
-    hg::DirectedHypergraph{T, V, E, D},
+    hg::DirectedHypergraph{T,V,E,D},
     sources::Set{Int},
     target::Int,
     hyperedge_weights::Vector{T}
-) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
+) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -354,7 +354,7 @@ function shortest_hyperpath_kk_heuristic(
     meta_he = add_hyperedge!(
         hg_copy;
         vertices_tail=D(metasource, convert(T, 0)),
-        vertices_head=D( x => convert(T, 0) for x in sources)
+        vertices_head=D(x => convert(T, 0) for x in sources)
     )
 
     path = shortest_hyperpath_kk_heuristic(
@@ -369,11 +369,11 @@ function shortest_hyperpath_kk_heuristic(
 end
 
 function shortest_hyperpath_kk_heuristic(
-    hg::DirectedHypergraph{T, V, E, D},
+    hg::DirectedHypergraph{T,V,E,D},
     sources::Set{Int},
     targets::Set{Int},
     hyperedge_weights::Vector{T}
-) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
+) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -382,7 +382,7 @@ function shortest_hyperpath_kk_heuristic(
     meta_he_source = add_hyperedge!(
         hg_copy;
         vertices_tail=D(metasource, convert(T, 0)),
-        vertices_head=D( x => convert(T, 0) for x in sources)
+        vertices_head=D(x => convert(T, 0) for x in sources)
     )
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -390,7 +390,7 @@ function shortest_hyperpath_kk_heuristic(
     metatarget = add_vertex!(hg_copy)
     meta_he_target = add_hyperedge!(
         hg_copy;
-        vertices_tail=D( x => convert(T, 0) for x in targets),
+        vertices_tail=D(x => convert(T, 0) for x in targets),
         vertices_head=D(metatarget, convert(T, 0))
     )
 
@@ -423,7 +423,7 @@ function short_hyperpath_vhe(
     v::Int,
     he::Int,
     state::DiHyperPathState{T}
-) where {H <: AbstractDirectedHypergraph, T <: Real}
+) where {H<:AbstractDirectedHypergraph,T<:Real}
     Q = Queue{Int}()
     for e in state.he_inedges[he]
         enqueue!(Q, e)
@@ -435,7 +435,7 @@ function short_hyperpath_vhe(
 
     # Construct (likely redundant) superpath by backtracking from target
     while length(Q) > 0
-        e = popfirst!(Q)
+        e = dequeue!(Q)
         push!(superpath, e)
 
         for f in state.he_inedges[e]
@@ -492,7 +492,7 @@ function is_reachable(
     target::Int,
     target_type::Symbol,
     state::DiHyperPathState{T}
-) where {H <: AbstractDirectedHypergraph, T <: Real}
+) where {H<:AbstractDirectedHypergraph,T<:Real}
     @assert target_type ∈ [:vertex, :hyperedge] "`target_type` must be :vertex or :hyperedge"
 
     if target_type == :vertex
@@ -519,11 +519,11 @@ function is_reachable_hyperedge(
     source_v::Int,
     target_he::Int,
     state::DiHyperPathState{T}
-) where {H <: AbstractDirectedHypergraph, T <: Real}
+) where {H<:AbstractDirectedHypergraph,T<:Real}
     # Priority queue of reached vertices
     Q = Queue{Int}()
     enqueue!(Q, source_v)
-    
+
     state.reached_vs[source_v] = true
 
     # Which vertices/hyperedges have been reached?
@@ -531,7 +531,7 @@ function is_reachable_hyperedge(
     reached_es = Set{Int}()
 
     while length(Q) > 0
-        v = popfirst!(Q)
+        v = dequeue!(Q)
         push!(reached_vs, v)
 
         for out_e in keys(hg.hg_tail.v2he[v])
@@ -582,11 +582,11 @@ function is_reachable_vertex(
     source_v::Int,
     target_v::Int,
     state::DiHyperPathState{T}
-) where {H <: AbstractDirectedHypergraph, T <: Real}
+) where {H<:AbstractDirectedHypergraph,T<:Real}
     # Priority queue of reached vertices
     Q = Queue{Int}()
     enqueue!(Q, source_v)
-    
+
     state.reached_vs[source_v] = true
 
     # Which vertices/hyperedges have been reached?
@@ -594,7 +594,7 @@ function is_reachable_vertex(
     reached_es = Set{Int}()
 
     while length(Q) > 0
-        v = popfirst!(Q)
+        v = dequeue!(Q)
         push!(reached_vs, v)
 
         for out_e in keys(hg.hg_tail.v2he[v])
@@ -635,7 +635,7 @@ end
     If one exists, obtain a hyperpath in directed hypergraph `hg` from a source vertex with index `source` to a target
     vertex with index `target`. The hyperpath cannot include any hyperedge with index included in the set `out`.
 """
-function get_hyperpath(hg::H, source::Int, target::Int, out::Set{Int}) where {H <: AbstractDirectedHypergraph}
+function get_hyperpath(hg::H, source::Int, target::Int, out::Set{Int}) where {H<:AbstractDirectedHypergraph}
     # Remove excluded hyperedges
     hg_copy = deepcopy(hg)
     hg_copy[:, sort(collect(out))] .= nothing
@@ -649,7 +649,7 @@ function get_hyperpath(hg::H, source::Int, target::Int, out::Set{Int}) where {H 
     if target ∉ reached_vs
         return Set{Int}()
     end
-    
+
     path = Set{Int}()
 
     # Try to minimize the size of the path by eliminating unnecessary hyperedges
@@ -685,19 +685,19 @@ end
     *metasource* vertex (connected to all source vertices by a single hyperedge) and/or *metatarget* vertex
     (connected to all target vertices by a single hyperedge).
 """
-function all_hyperpaths(hg::H, source::Int, target::Int) where {H <: AbstractDirectedHypergraph}
+function all_hyperpaths(hg::H, source::Int, target::Int) where {H<:AbstractDirectedHypergraph}
     # Queue of subproblems
     # Subproblem is defined as a "out" set of hyperedges (which must not be present in a path) and "keep" hyperedges
     # which must be present in the path
-    Q = Queue{Tuple{Set{Int}, Set{Int}}}()
-    
+    Q = Queue{Tuple{Set{Int},Set{Int}}}()
+
     paths = Set{Set{Int}}()
 
     # Start with no restrictions
     enqueue!(Q, (Set{Int}(), Set{Int}()))
 
     while length(Q) > 0
-        out, keep = popfirst!(Q)
+        out, keep = dequeue!(Q)
 
         path = get_hyperpath(hg, source, target, out)
 
@@ -715,7 +715,7 @@ function all_hyperpaths(hg::H, source::Int, target::Int) where {H <: AbstractDir
     paths
 end
 
-function all_hyperpaths(hg::H, source::Int, targets::Set{Int}) where {H <: AbstractDirectedHypergraph}
+function all_hyperpaths(hg::H, source::Int, targets::Set{Int}) where {H<:AbstractDirectedHypergraph}
     hg_copy = deepcopy(hg)
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -723,7 +723,7 @@ function all_hyperpaths(hg::H, source::Int, targets::Set{Int}) where {H <: Abstr
     metatarget = add_vertex!(hg_copy)
     meta_he = add_hyperedge!(
         hg_copy;
-        vertices_tail=D( x => convert(T, 0) for x in targets),
+        vertices_tail=D(x => convert(T, 0) for x in targets),
         vertices_head=D(metatarget, convert(T, 0))
     )
 
@@ -737,7 +737,7 @@ function all_hyperpaths(hg::H, source::Int, targets::Set{Int}) where {H <: Abstr
     return Set(setdiff(p, Set{Int}(meta_he)) for p in paths)
 end
 
-function all_hyperpaths(hg::H, sources::Set{Int}, target::Int) where {H <: AbstractDirectedHypergraph}
+function all_hyperpaths(hg::H, sources::Set{Int}, target::Int) where {H<:AbstractDirectedHypergraph}
     hg_copy = deepcopy(hg)
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -746,7 +746,7 @@ function all_hyperpaths(hg::H, sources::Set{Int}, target::Int) where {H <: Abstr
     meta_he = add_hyperedge!(
         hg_copy;
         vertices_tail=D(metasource, convert(T, 0)),
-        vertices_head=D( x => convert(T, 0) for x in sources)
+        vertices_head=D(x => convert(T, 0) for x in sources)
     )
 
     paths = all_hyperpaths(
@@ -759,7 +759,7 @@ function all_hyperpaths(hg::H, sources::Set{Int}, target::Int) where {H <: Abstr
     return Set(setdiff(p, Set{Int}(meta_he)) for p in paths)
 end
 
-function all_hyperpaths(hg::H, sources::Set{Int}, targets::Set{Int}) where {H <: AbstractDirectedHypergraph}
+function all_hyperpaths(hg::H, sources::Set{Int}, targets::Set{Int}) where {H<:AbstractDirectedHypergraph}
     hg_copy = deepcopy(hg)
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -768,7 +768,7 @@ function all_hyperpaths(hg::H, sources::Set{Int}, targets::Set{Int}) where {H <:
     meta_he_source = add_hyperedge!(
         hg_copy;
         vertices_tail=D(metasource, convert(T, 0)),
-        vertices_head=D( x => convert(T, 0) for x in sources)
+        vertices_head=D(x => convert(T, 0) for x in sources)
     )
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -776,7 +776,7 @@ function all_hyperpaths(hg::H, sources::Set{Int}, targets::Set{Int}) where {H <:
     metatarget = add_vertex!(hg_copy)
     meta_he_target = add_hyperedge!(
         hg_copy;
-        vertices_tail=D( x => convert(T, 0) for x in targets),
+        vertices_tail=D(x => convert(T, 0) for x in targets),
         vertices_head=D(metatarget, convert(T, 0))
     )
 
@@ -794,18 +794,18 @@ function initialize_ilp_model(
     hg::H,
     source::Int,
     target::Int,
-    hyperedge_weights::Vector{T}) where {H<:AbstractDirectedHypergraph, T<:Real}
+    hyperedge_weights::Vector{T}) where {H<:AbstractDirectedHypergraph,T<:Real}
 
     # Initialize state
     state = initialize_dihyperpath_state(hg, hyperedge_weights)
-    
+
     # First, verify that the problem is well-posed
     # That is, can `target` be reached from `source`
     @assert is_reachable(hg, source, target, state)
 
     # Initialize integer linear programming model
     model = Model(GLPK.Optimizer)
-    
+
     # Create one binary variable for each hyperedge in `hg`
     @variable(model, x[1:nhe(hg)], Bin)
     set_start_value.(x, 1)
@@ -879,7 +879,7 @@ function initialize_ilp_model(
     @objective(model, Min, dot(x, state.edge_weights))
 
     return model, x, cuts, crosses
-    
+
 end
 
 """
@@ -926,13 +926,13 @@ function shortest_hyperpath_kk_ilp(
     source::Int,
     target::Int,
     hyperedge_weights::Vector{T}
-) where {H<:AbstractDirectedHypergraph, T<:Real}
+) where {H<:AbstractDirectedHypergraph,T<:Real}
 
     # TODO: do I need to carry `x` over like this? Not sure about variable scope
     model, x, cuts, crosses = initialize_ilp_model(hg, source, target, hyperedge_weights)
 
     optimize!(model)
-    
+
     # Convert floating-point solution into BitVector
     # TODO: Is this necessary w/ JuMP? Or will the output really be binary? 
     solution = value.(x) .> 0.5
@@ -961,7 +961,7 @@ function shortest_hyperpath_kk_ilp(
     source::Int,
     targets::Set{Int},
     hyperedge_weights::Vector{T}
-) where {H<:AbstractDirectedHypergraph, T<:Real}
+) where {H<:AbstractDirectedHypergraph,T<:Real}
     hg_copy = deepcopy(hg)
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -969,7 +969,7 @@ function shortest_hyperpath_kk_ilp(
     metatarget = add_vertex!(hg_copy)
     meta_he = add_hyperedge!(
         hg_copy;
-        vertices_tail=D( x => convert(T, 0) for x in targets),
+        vertices_tail=D(x => convert(T, 0) for x in targets),
         vertices_head=D(metatarget, convert(T, 0))
     )
 
@@ -989,7 +989,7 @@ function shortest_hyperpath_kk_ilp(
     sources::Set{Int},
     target::Int,
     hyperedge_weights::Vector{T}
-) where {H<:AbstractDirectedHypergraph, T<:Real}
+) where {H<:AbstractDirectedHypergraph,T<:Real}
     hg_copy = deepcopy(hg)
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -998,7 +998,7 @@ function shortest_hyperpath_kk_ilp(
     meta_he = add_hyperedge!(
         hg_copy;
         vertices_tail=D(metasource, convert(T, 0)),
-        vertices_head=D( x => convert(T, 0) for x in sources)
+        vertices_head=D(x => convert(T, 0) for x in sources)
     )
 
     path = shortest_hyperpath_kk_ilp(
@@ -1017,7 +1017,7 @@ function shortest_hyperpath_kk_ilp(
     sources::Set{Int},
     targets::Set{Int},
     hyperedge_weights::Vector{T}
-) where {H<:AbstractDirectedHypergraph, T<:Real}
+) where {H<:AbstractDirectedHypergraph,T<:Real}
     hg_copy = deepcopy(hg)
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -1026,7 +1026,7 @@ function shortest_hyperpath_kk_ilp(
     meta_he_source = add_hyperedge!(
         hg_copy;
         vertices_tail=D(metasource, convert(T, 0)),
-        vertices_head=D( x => convert(T, 0) for x in sources)
+        vertices_head=D(x => convert(T, 0) for x in sources)
     )
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -1034,7 +1034,7 @@ function shortest_hyperpath_kk_ilp(
     metatarget = add_vertex!(hg_copy)
     meta_he_target = add_hyperedge!(
         hg_copy;
-        vertices_tail=D( x => convert(T, 0) for x in targets),
+        vertices_tail=D(x => convert(T, 0) for x in targets),
         vertices_head=D(metatarget, convert(T, 0))
     )
 
@@ -1071,7 +1071,7 @@ function expand_cuts(
     cuts::Vector{Set{Int}},
     crosses::Vector{BitVector},
     curr_sol::BitVector
-) where {H <: AbstractDirectedHypergraph}
+) where {H<:AbstractDirectedHypergraph}
     new_cuts = Set{Int}[]
     new_crosses = BitVector[]
 
@@ -1090,7 +1090,7 @@ function expand_cuts(
                 ]
             end
         end
-        
+
         # If this is a valid s,t-cut that no active hyperedges cross, add it to the new cut list
         if !(any(new_cross) || target ∈ new_cut)
             push!(new_cuts, new_cut)
@@ -1107,8 +1107,8 @@ function expand_cuts(
                 # cut so `e` no longer crosses it
                 if curr_sol[e] && new_cross[e]
                     # Greedily pick the vertex in the tail of `e` that causes the fewest hyperedges to newly cross this cut
-                    new_cut_ev = Dict{Int, Set{Int}}()
-                    new_cross_ev = Dict{Int, Vector{Bool}}()
+                    new_cut_ev = Dict{Int,Set{Int}}()
+                    new_cross_ev = Dict{Int,Vector{Bool}}()
                     for v in keys(hg.hg_tail.he2v[e])
                         new_cut_ev[v] = setdiff(new_cut, Set(v))
                         new_cross_ev[v] = [
