@@ -20,6 +20,22 @@ dh1[2,7,5] = -1.5
 dh1[1,7,6] = 0.0
 dh1[2,5,6] = 1.5
 
+tail_2 = [
+    true    nothing nothing nothing nothing nothing nothing nothing nothing
+    nothing true    nothing nothing nothing true    nothing nothing nothing
+    nothing nothing true    nothing nothing nothing true    nothing nothing
+    nothing nothing nothing true    nothing true    true    nothing nothing
+    nothing nothing nothing nothing true    nothing nothing true    true
+]
+head_2 = [
+    nothing nothing nothing nothing nothing true    true    nothing nothing
+    true    nothing nothing nothing nothing nothing nothing true    nothing
+    true    nothing nothing nothing nothing nothing true    nothing nothing
+    nothing true    true    nothing true    nothing nothing nothing nothing
+    nothing nothing nothing true    nothing nothing nothing nothing nothing
+]
+dh2 = DirectedHypergraph(tail_2, head_2)
+
 # @testset "SimpleDirectedHypergraphs Code linting (JET.jl)" begin
 #     JET.test_package(SimpleDirectedHypergraphs; target_defined_modules = true)
 # end
@@ -436,4 +452,48 @@ end;
     @test all(dh_dual.v_meta .== [(dh.he_meta_tail[i], dh.he_meta_head[i]) for i in 1:nhe(dh)])
 
     @test_throws AssertionError dual(DirectedHypergraph(0,0))
+end;
+
+
+@testset "SimpleDirectedHypergraphs paths/distance         " begin
+    w2 = [3, 7, 19, 10, 13, 11, 1, 12, 8]
+    init_state = initialize_dihyperpath_state(dh2, w2)
+    @test init_state.reached_vs .== BitVector(zeros(nhv(dh2)))
+    @test init_state.marked_hes .== BitVector(zeros(nhe(dh2)))
+    @test init_state.removed_hes .== BitVector(zeros(nhe(dh2)))
+    @test init_state.hes_tail_count .== length.(keys.(dh2.hg_tail.he2v))
+    @test init_state.he_inedges .== [Set{Int}() for _ in 1:nhe(dh2)]
+    @test init_state.edge_weights .== w2
+    @test init_state.edge_costs .== fill(typemax(Int), nhe(dh2))
+    @test init_state.edge_heap_points .== fill(nothing, nhe(dh2))
+
+    # Example adapted from Blau et al., DOI: 10.1039/D0SC05647B
+    tail_3 = [
+        true    true    true    true    nothing nothing nothing nothing nothing nothing nothing
+        nothing nothing nothing nothing true    nothing nothing nothing nothing nothing nothing
+        nothing nothing nothing nothing nothing true    nothing nothing nothing nothing nothing
+        nothing nothing nothing nothing nothing nothing true    nothing nothing nothing nothing
+        nothing nothing nothing nothing nothing nothing nothing true    nothing nothing nothing
+        nothing nothing nothing nothing nothing nothing nothing nothing true    nothing nothing
+        nothing nothing nothing nothing nothing nothing nothing nothing nothing true    nothing
+        nothing nothing nothing nothing nothing nothing nothing nothing nothing nothing true
+        nothing nothing nothing nothing nothing nothing nothing nothing nothing nothing nothing
+    ]
+    head_3 = [
+        nothing nothing nothing nothing nothing nothing nothing nothing nothing nothing nothing
+        nothing true    nothing nothing nothing nothing nothing nothing nothing nothing nothing
+        true    nothing nothing nothing nothing nothing nothing nothing nothing nothing nothing
+        true    nothing nothing nothing nothing nothing nothing nothing nothing nothing nothing
+        nothing nothing true    nothing nothing nothing nothing nothing nothing nothing nothing
+        nothing nothing true    nothing nothing nothing nothing nothing nothing nothing nothing
+        nothing nothing nothing true    nothing nothing true    true    nothing nothing nothing
+        nothing nothing nothing nothing nothing true    nothing nothing true    nothing nothing
+        nothing nothing nothing nothing true    nothing nothing nothing nothing true    true
+    ]
+    dh3 = DirectedHypergraph(tail_3, head_3)
+
+end;
+
+@testset "SimpleDirectedHypergraphs diameter               " begin
+    
 end;

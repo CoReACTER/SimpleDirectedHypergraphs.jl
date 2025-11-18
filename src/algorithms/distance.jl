@@ -89,7 +89,7 @@ function SimpleHypergraphs.distance(
     hg::H,
     distance_method::SnodeDistanceKKILP,
     hyperedge_weights::AbstractVector{T}
-) where {H <: AbstractDirectedHypergraph}
+) where {H <: AbstractDirectedHypergraph, T <: Real}
 
     path = shortest_hyperpath_kk_ilp(
         hg,

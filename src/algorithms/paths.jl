@@ -22,7 +22,7 @@
     `edge_heap_points` tracks the references for each hyperedge in the heap used during heuristic pathfinding.
 
 """
-struct DiHyperPathState{T} where {T<:Real}
+struct DiHyperPathState{T<:Real}
     reached_vs::BitVector
     marked_hes::BitVector
     removed_hes::BitVector
@@ -291,6 +291,7 @@ function shortest_hyperpath_kk_heuristic(
                 state.edge_heap_points[f] = push!(
                     Hmin,
                     sum(state.edge_weights[x] for x in short_hyperpath_vhe(hg, source, f, state))
+                )
             end
         end
     end
@@ -476,6 +477,34 @@ end
 """
     is_reachable(
         hg::H,
+        source::Int,
+        target::Int,
+        target_type::Symbol,
+        state::DiHyperPathState{T}
+    ) where {H <: AbstractDirectedHypergraph, T <: Real}
+
+    TODO: this
+
+"""
+function is_reachable(
+    hg::H,
+    source::Int,
+    target::Int,
+    target_type::Symbol,
+    state::DiHyperPathState{T}
+) where {H <: AbstractDirectedHypergraph, T <: Real}
+    @assert target_type ∈ [:vertex, :hyperedge] "`target_type` must be :vertex or :hyperedge"
+
+    if target_type == :vertex
+        is_reachable_vertex(hg, source, target, state)
+    else
+        is_reachable_hyperedge(hg, source, target, state)
+    end
+end
+
+"""
+    is_reachable_hyperedge(
+        hg::H,
         source_v::Int,
         target_he::Int,
         state::DiHyperPathState{T}
@@ -485,7 +514,7 @@ end
     a source vertex with index `source_v` to a target hyperedge with index `target_he`. A `DiHyperPathState` object
     `state` is used to keep track of what vertices and hyperedges have been visited during a traversal.
 """
-function is_reachable(
+function is_reachable_hyperedge(
     hg::H,
     source_v::Int,
     target_he::Int,
@@ -537,7 +566,7 @@ function is_reachable(
 end
 
 """
-    is_reachable(
+    is_reachable_vertex(
         hg::H,
         source_v::Int,
         target_v::Int,
@@ -548,7 +577,7 @@ end
     a source vertex with index `source_v` to a target vertex with index `target_v`. A `DiHyperPathState` object
     `state` is used to keep track of what vertices and hyperedges have been visited during a traversal.
 """
-function is_reachable(
+function is_reachable_vertex(
     hg::H,
     source_v::Int,
     target_v::Int,
