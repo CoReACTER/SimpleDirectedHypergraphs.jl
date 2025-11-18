@@ -242,7 +242,7 @@ function shortest_hyperpath_kk_heuristic(
 
     # Eliminate non-doubly reachable hyperedges
     hg_copy = deepcopy(hg)
-    hg_copy[:, Not(dr_hes)] .= nothing
+    hg_copy[:, InvertedIndices.Not(dr_hes)] .= (nothing, nothing)
 
     # Min-heap for hyperedges
     Hmin = MutableBinaryMinHeap{Tuple{Int,T}}()
@@ -261,7 +261,6 @@ function shortest_hyperpath_kk_heuristic(
         state.removed_hes[e] = true
 
         path = short_hyperpath_vhe(hg, source, e, state)
-        # TODO: nature of cost function for hyperedge vs. cost function for path
         state.edge_costs[e] = sum(state.edge_weights[x] for x in path)
 
         out_edges = Set{Int}()
@@ -454,17 +453,19 @@ function short_hyperpath_vhe(
     superpath = sort(collect(superpath), by=x -> state.edge_costs[x], rev=true)
     hg_copy = deepcopy(hg)
     # Eliminate all hyperedges not on superpath
-    hg_copy[:, Not(superpath)] .= nothing
+    hg_copy.hg_tail[:, InvertedIndices.Not(superpath)] .= nothing
+    hg_copy.hg_head[:, InvertedIndices.Not(superpath)] .= nothing
 
     # Remove target from superpath; does not make sense to remove target in the next stage
     filter!(x -> x != he, superpath)
 
     # Try to minimize the size of the path by eliminating unnecessary hyperedges
     for e in superpath
-        hg_copy[:, e] .= nothing
+        hg_copy.hg_tail[:, e] .= nothing
+        hg_copy.hg_head[:, e] .= nothing
 
         # Only if hyperedge is essential for reaching target,
-        if !is_reachable(hg_copy, v, he, state)
+        if !is_reachable(hg_copy, v, he, :hyperedge, state)
             # Restore hyperedge to hypergraph copy
             hg_copy[:, e] .= hg[:, e]
             push!(path, e)
@@ -801,7 +802,7 @@ function initialize_ilp_model(
 
     # First, verify that the problem is well-posed
     # That is, can `target` be reached from `source`
-    @assert is_reachable(hg, source, target, state)
+    @assert is_reachable(hg, source, target, :vertex, state)
 
     # Initialize integer linear programming model
     model = Model(GLPK.Optimizer)
