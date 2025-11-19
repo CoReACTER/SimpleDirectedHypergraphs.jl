@@ -489,19 +489,6 @@ end;
     @test bt[1] == Set{Int}(1:5)
     @test bt[2] == Set{Int}(1:9)
 
-    # Test `short_hyperpath_vhe` for greedy hyperpath generation
-    he_inedges = [
-        Set{Int}([6,7]),
-        Set{Int}([1,8]),
-        Set{Int}([1,9]),
-        Set{Int}([2,3,5]),
-        Set{Int}(4),
-        Set{Int}([1,2,3,5]),
-        Set{Int}([1,2,3,5]),
-        Set{Int}(4),
-        Set{Int}(4)
-    ]
-
     for i in 1:nhv(dh2)
         # In this example, all nodes (and hyperedges) can be reached from anywhere
         for j in 1:nhv(dh2)
@@ -515,6 +502,26 @@ end;
             end
         end
     end
+    @test_throws AssertionError is_reachable(dh2, i, e, :test, init_state)
+
+    # Test `short_hyperpath_vhe` for greedy hyperpath generation
+    he_inedges = [
+        Set{Int}([6,7]),
+        Set{Int}([1,8]),
+        Set{Int}([1,9]),
+        Set{Int}([2,3,5]),
+        Set{Int}(4),
+        Set{Int}([1,2,3,5]),
+        Set{Int}([1,2,3,5]),
+        Set{Int}(4),
+        Set{Int}(4)
+    ]
+    init_state.he_inedges .= he_inedges
+
+    @test (
+        SimpleDirectedHypergraphs.short_hyperpath_vhe(dh2, 1, 4, init_state) == Set{Int}([1,2,4]) ||
+        SimpleDirectedHypergraphs.short_hyperpath_vhe(dh2, 1, 4, init_state) == Set{Int}([1,3,4])
+    )
 
     # Example adapted from Blau et al., DOI: 10.1039/D0SC05647B
     tail_3 = [

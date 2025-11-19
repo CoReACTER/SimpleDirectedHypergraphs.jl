@@ -1,3 +1,18 @@
+#TODO: STATUS
+# Somehow state.he_inedges is getting screwy
+# DH2:
+# [ Info: All inedges:
+# [ Info: 	1: Set([6, 7])
+# [ Info: 	2: Set([8, 1])
+# [ Info: 	3: Set([7, 9, 1])
+# [ Info: 	4: Set([5, 2, 3])
+# [ Info: 	5: Set([4])
+# [ Info: 	6: Set([5, 2, 8, 3, 1])
+# [ Info: 	7: Set([5, 7, 2, 9, 3, 1])
+# [ Info: 	8: Set([4])
+# [ Info: 	9: Set([4])
+
+
 """
     struct DiHyperPathState{T}(
         reached_vs::BitVector,
@@ -124,7 +139,7 @@ function forward_reachable(
     end
 
     # Return reached vertices and hyperedges
-    return reached_vs, reached_es
+    return (reached_vs, reached_es)
 end
 
 """
@@ -182,7 +197,7 @@ function backward_traceable(
     end
 
     # Return reached vertices and hyperedges
-    return reached_vs, reached_es
+    return (reached_vs, reached_es)
 end
 
 
@@ -232,32 +247,37 @@ function shortest_hyperpath_kk_heuristic(
     target::Int,
     hyperedge_weights::Vector{T}
 ) where {H<:AbstractDirectedHypergraph,T<:Real}
+
     state = initialize_dihyperpath_state(hg, hyperedge_weights)
 
+    # Verify that the target can be reached
+    fr = forward_reachable(hg, source, state)
+    @assert target ∈ fr[1]
+
     # Doubly reachable hyperedges
-    dr_hes = intersect(
-        forward_reachable(hg, source, state)[2],
+    dr_hes = sort!(collect(intersect(
+        fr[2],
         backward_traceable(hg, target, state)[2]
-    )
+    )))
 
     # Eliminate non-doubly reachable hyperedges
     hg_copy = deepcopy(hg)
-    hg_copy[:, InvertedIndices.Not(dr_hes)] .= (nothing, nothing)
+    hg_copy.hg_tail[:, InvertedIndices.Not(dr_hes)] .= nothing
+    hg_copy.hg_head[:, InvertedIndices.Not(dr_hes)] .= nothing
 
     # Min-heap for hyperedges
-    Hmin = MutableBinaryMinHeap{Tuple{Int,T}}()
+    Hmin = MutableBinaryMinHeap{Tuple{T, Int}}()
     for out_e in keys(hg.hg_tail.v2he[source])
         # If only the source is needed for this hyperedge
         if length(hg.hg_tail.he2v[out_e]) == 1
-            # TODO: what do cost functions need?
-            state.edge_heap_points[out_e] = push!(Hmin, state.edge_weights[out_e])
+            state.edge_heap_points[out_e] = push!(Hmin, (state.edge_weights[out_e], out_e))
         end
     end
 
     state.reached_vs[source] = true
 
     while length(Hmin) > 0
-        e = pop!(Hmin)
+        e = pop!(Hmin)[2]
         state.removed_hes[e] = true
 
         path = short_hyperpath_vhe(hg, source, e, state)
@@ -266,30 +286,38 @@ function shortest_hyperpath_kk_heuristic(
         out_edges = Set{Int}()
         for v in keys(hg.hg_head.he2v[e])
             for f in keys(hg.hg_tail.v2he[v])
-                if !state.reached_vs[v]
-                    state.hes_tail_count[f] -= 1
-                end
-
                 if !state.marked_hes[f]
                     push!(out_edges, f)
                     state.marked_hes[f] = true
+
+                    if !state.reached_vs[v]
+                        state.hes_tail_count[f] -= 1
+                    end
                 end
             end
             state.reached_vs[v] = true
         end
 
         for f in out_edges
+            state.marked_hes[f] = false
+
             push!(state.he_inedges[f], e)
             if !isnothing(state.edge_heap_points[f]) && !state.removed_hes[f]
                 update!(
                     Hmin,
                     state.edge_heap_points[f],
-                    sum(state.edge_weights[x] for x in short_hyperpath_vhe(hg, source, f, state))
+                    (
+                        sum(state.edge_weights[x] for x in short_hyperpath_vhe(hg, source, f, state)),
+                        f
+                    )
                 )
             elseif isnothing(state.edge_heap_points[f]) && state.hes_tail_count[f] == 0
                 state.edge_heap_points[f] = push!(
                     Hmin,
-                    sum(state.edge_weights[x] for x in short_hyperpath_vhe(hg, source, f, state))
+                    (
+                        sum(state.edge_weights[x] for x in short_hyperpath_vhe(hg, source, f, state)),
+                        f
+                    )
                 )
             end
         end
@@ -297,11 +325,19 @@ function shortest_hyperpath_kk_heuristic(
 
     path = Set{Int}()
     cost = typemax(T)
-    for in_e in keys(hg.hg_head.v2he[target])
+    inedges = keys(hg.hg_head.v2he[target])
+    @info "Target inedges: $inedges"
+    @info "All inedges:"
+    for i in 1:nhe(hg)
+        inedges_i = state.he_inedges[i]
+        @info "\t$i: $inedges_i"
+    end
+    for in_e in inedges
         if !isnothing(state.edge_heap_points[in_e])
             p = short_hyperpath_vhe(hg, source, in_e, state)
             cost_p = sum(state.edge_weights[e] for e in p)
             if cost_p < cost
+                @info "Updating to: path $p with cost $cost_p"
                 path = p
                 cost = cost_p
             end
