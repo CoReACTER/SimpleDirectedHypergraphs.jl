@@ -7,7 +7,6 @@ using Graphs
 using Test
 # using JET
 
-
 dh1 = DirectedHypergraph{Float64,Int,String}(7, 6)
 dh1[1, 1, 1] = 1.0
 dh1.hg_head[2:3, 1] .= 2.5  # Assignment on a directed hypergraph directly with slices is currently awkward
@@ -30,7 +29,7 @@ tail_2 = [
 head_2 = [
     nothing nothing nothing nothing nothing true true nothing nothing
     true nothing nothing nothing nothing nothing nothing true nothing
-    true nothing nothing nothing nothing nothing true nothing true
+    true nothing nothing nothing nothing nothing nothing nothing true
     nothing true true nothing true nothing nothing nothing nothing
     nothing nothing nothing true nothing nothing nothing nothing nothing
 ]
@@ -489,6 +488,33 @@ end;
     bt = backward_traceable(dh2, 5, init_state)
     @test bt[1] == Set{Int}(1:5)
     @test bt[2] == Set{Int}(1:9)
+
+    # Test `short_hyperpath_vhe` for greedy hyperpath generation
+    he_inedges = [
+        Set{Int}([6,7]),
+        Set{Int}([1,8]),
+        Set{Int}([1,9]),
+        Set{Int}([2,3,5]),
+        Set{Int}(4),
+        Set{Int}([1,2,3,5]),
+        Set{Int}([1,2,3,5]),
+        Set{Int}(4),
+        Set{Int}(4)
+    ]
+
+    for i in 1:nhv(dh2)
+        # In this example, all nodes (and hyperedges) can be reached from anywhere
+        for j in 1:nhv(dh2)
+            @testset "Test DH2: v$i\t -> v$j" begin
+                @test is_reachable(dh2, i, j, :vertex, init_state)
+            end
+        end
+        for e in 1:nhe(dh2)
+            @testset "Test DH2: v$i\t -> he$e" begin
+                @test is_reachable(dh2, i, e, :hyperedge, init_state)
+            end
+        end
+    end
 
     # Example adapted from Blau et al., DOI: 10.1039/D0SC05647B
     tail_3 = [

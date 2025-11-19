@@ -496,138 +496,14 @@ function is_reachable(
 ) where {H<:AbstractDirectedHypergraph,T<:Real}
     @assert target_type ∈ [:vertex, :hyperedge] "`target_type` must be :vertex or :hyperedge"
 
-    if target_type == :vertex
-        is_reachable_vertex(hg, source, target, state)
+    fr = forward_reachable(hg, source, state)
+
+    #TODO: make a short-circuiting version of this. Can't for the life of me figure out why this isn't working...
+    if target_type === :vertex
+        return target ∈ fr[1]
     else
-        is_reachable_hyperedge(hg, source, target, state)
+        return target ∈ fr[2]
     end
-end
-
-"""
-    is_reachable_hyperedge(
-        hg::H,
-        source_v::Int,
-        target_he::Int,
-        state::DiHyperPathState{T}
-    ) where {H <: AbstractDirectedHypergraph, T <: Real}
-
-    A short-circuiting version of `forward_reachable` that returns `true` if a hyperpath in hypergraph `hg` exists from
-    a source vertex with index `source_v` to a target hyperedge with index `target_he`. A `DiHyperPathState` object
-    `state` is used to keep track of what vertices and hyperedges have been visited during a traversal.
-"""
-function is_reachable_hyperedge(
-    hg::H,
-    source_v::Int,
-    target_he::Int,
-    state::DiHyperPathState{T}
-) where {H<:AbstractDirectedHypergraph,T<:Real}
-    # Priority queue of reached vertices
-    Q = Queue{Int}()
-    enqueue!(Q, source_v)
-
-    state.reached_vs[source_v] = true
-
-    # Which vertices/hyperedges have been reached?
-    reached_vs = Set{Int}()
-    reached_es = Set{Int}()
-
-    while length(Q) > 0
-        v = dequeue!(Q)
-        push!(reached_vs, v)
-
-        for out_e in keys(hg.hg_tail.v2he[v])
-            # Following pseudocode exactly. This feels awkward; how slow would it be to just query reached_vs?
-            state.hes_tail_count[out_e] -= 1
-
-            if state.hes_tail_count[out_e] == 0
-                push!(reached_es, out_e)
-                if out_e == target_he
-                    return true
-                end
-
-                for w in keys(hg.hg_head.he2v[out_e])
-                    if !state.reached_vs[w]
-                        enqueue!(Q, w)
-                        state.reached_vs[w] = true
-                    end
-                end
-            end
-        end
-    end
-
-    # Restore state
-    for v in reached_vs
-        state.reached_vs[v] = false
-        for out_e in hg.hg_tail.v2he[v]
-            state.hes_tail_count[out_e] += 1
-        end
-    end
-
-    return false
-end
-
-"""
-    is_reachable_vertex(
-        hg::H,
-        source_v::Int,
-        target_v::Int,
-        state::DiHyperPathState{T}
-    ) where {H <: AbstractDirectedHypergraph, T <: Real}
-
-    A short-circuiting version of `forward_reachable` that returns `true` if a hyperpath in hypergraph `hg` exists from
-    a source vertex with index `source_v` to a target vertex with index `target_v`. A `DiHyperPathState` object
-    `state` is used to keep track of what vertices and hyperedges have been visited during a traversal.
-"""
-function is_reachable_vertex(
-    hg::H,
-    source_v::Int,
-    target_v::Int,
-    state::DiHyperPathState{T}
-) where {H<:AbstractDirectedHypergraph,T<:Real}
-    # Priority queue of reached vertices
-    Q = Queue{Int}()
-    enqueue!(Q, source_v)
-
-    state.reached_vs[source_v] = true
-
-    # Which vertices/hyperedges have been reached?
-    reached_vs = Set{Int}()
-    reached_es = Set{Int}()
-
-    while length(Q) > 0
-        v = dequeue!(Q)
-        push!(reached_vs, v)
-
-        for out_e in keys(hg.hg_tail.v2he[v])
-            # Following pseudocode exactly. This feels awkward; how slow would it be to just query reached_vs?
-            state.hes_tail_count[out_e] -= 1
-
-            if state.hes_tail_count[out_e] == 0
-                push!(reached_es, out_e)
-
-                for w in keys(hg.hg_head.he2v[out_e])
-                    if w == target_v
-                        return true
-                    end
-
-                    if !state.reached_vs[w]
-                        enqueue!(Q, w)
-                        state.reached_vs[w] = true
-                    end
-                end
-            end
-        end
-    end
-
-    # Restore state
-    for v in reached_vs
-        state.reached_vs[v] = false
-        for out_e in hg.hg_tail.v2he[v]
-            state.hes_tail_count[out_e] += 1
-        end
-    end
-
-    return false
 end
 
 """
@@ -658,7 +534,7 @@ function get_hyperpath(hg::H, source::Int, target::Int, out::Set{Int}) where {H<
         hg_copy[:, e] .= nothing
 
         # Only if hyperedge is essential for reaching target,
-        if !isreachable(hg_copy, source, target, state)
+        if !is_reachable(hg_copy, source, target, :vertex, state)
             # Restore hyperedge to hypergraph copy
             hg_copy[:, e] .= hg[:, e]
             push!(path, e)
