@@ -1,203 +1,102 @@
-#TODO: STATUS
-# Somehow state.he_inedges is getting screwy
-# DH2:
-# [ Info: All inedges:
-# [ Info: 	1: Set([6, 7])
-# [ Info: 	2: Set([8, 1])
-# [ Info: 	3: Set([7, 9, 1])
-# [ Info: 	4: Set([5, 2, 3])
-# [ Info: 	5: Set([4])
-# [ Info: 	6: Set([5, 2, 8, 3, 1])
-# [ Info: 	7: Set([5, 7, 2, 9, 3, 1])
-# [ Info: 	8: Set([4])
-# [ Info: 	9: Set([4])
-
-
-"""
-    struct DiHyperPathState{T}(
-        reached_vs::BitVector,
-        marked_hes::BitVector,
-        removed_hes::BitVector,
-        hes_tail_count::Vector{Int},
-        he_inedges::Vector{Set{Int}},
-        edge_weights::Vector{T},
-        edge_costs::Vector{T},
-        edge_heap_points::Vector{Union{Nothing, Int}}
-    ) where {T<:Real}
-
-    Stores the state of a pathfinding operation.
-
-    `reached_vs` and `marked_hes` track which vertices and hyperedges, respectively, have been visited and/or need to
-    be searched. `removed_hes` tracks which hyperedges have been removed from the edge heap during the main heuristic
-    pathfinding operation (see `shortest_hyperpath_kk_heuristic`). `hes_tail_count` is a vector containing the size of
-    the tail of each hyperedge. `he_inedges` tracks which hyperedges flow into which other hyperedges (i.e., for a
-    hyperedge `f`, the *inedges* are those hyperedges `e` where there exists some vertex `v` that is in both the head
-    of `e` and the tail of `f`). `edge_weights` are a set of initially-defined costs associated with each directed
-    hyperedge, and `edge_costs` are the (estimated) costs from the source vertex to each hyperedge. Finally,
-    `edge_heap_points` tracks the references for each hyperedge in the heap used during heuristic pathfinding.
-
-"""
-struct DiHyperPathState{T<:Real}
-    reached_vs::BitVector
-    marked_hes::BitVector
-    removed_hes::BitVector
-    hes_tail_count::Vector{Int}
-    he_inedges::Vector{Set{Int}}
-    edge_weights::Vector{T}
-    edge_costs::Vector{T}
-    edge_heap_points::Vector{Union{Nothing,Int}}
-end
-
-"""
-    initialize_dihyperpath_state(
-        hg::H,
-        hyperedge_weights::Vector{T}
-    ) where {H <: AbstractDirectedHypergraph, T <: Real}
-
-    Construct an initial state for directed hypergraph pathfinding on hypergraph `hg` with hyperedge weights (i.e.,
-    costs) `hyperedge_weights`.
-"""
-function initialize_dihyperpath_state(
-    hg::H,
-    hyperedge_weights::Vector{T}
-) where {H<:AbstractDirectedHypergraph,T<:Real}
-    # Hyperedge weights need to be nonnegative
-    @assert all(hyperedge_weights .>= 0)
-
-    nv = nhv(hg)
-    ne = nhe(hg)
-
-    edge_heap_points = Vector{Union{Nothing,Int}}(undef, ne)
-    edge_heap_points .= nothing
-
-    return DiHyperPathState{T}(
-        BitVector(falses(nv)),
-        BitVector(falses(ne)),
-        BitVector(falses(ne)),
-        length.(keys.(hg.hg_tail.he2v)),
-        [Set{Int}() for _ in 1:ne],
-        hyperedge_weights,
-        fill(typemax(T), ne),
-        edge_heap_points
-    )
-end
-
 """
     forward_reachable(
         hg::H,
         source::Int,
-        state::DiHyperPathState{T}
-    ) where {H <: AbstractDirectedHypergraph, T <: Real}
+    ) where {H <: AbstractDirectedHypergraph}
 
     Traverses a hypergraph `hg` starting from vertex with index `source` to determine all other vertices and hyperedges
     that are reachable, following hyperedges along their forward direction (i.e., from tail to head).
 
-    `DiHyperPathState` `state` is used to track what vertices/hyperedges have been traversed.
 """
 function forward_reachable(
     hg::H,
     source::Int,
-    state::DiHyperPathState{T}
-) where {H<:AbstractDirectedHypergraph,T<:Real}
+) where {H<:AbstractDirectedHypergraph}
     # Priority queue of reached vertices
     Q = Queue{Int}()
     enqueue!(Q, source)
 
-    state.reached_vs[source] = true
+    reached_vs = BitVector(falses(nhv(hg)))
+    reached_vs[source] = true
+
+    hes_tail_count = length.(keys.(hg.hg_tail.he2v))
 
     # Which vertices/hyperedges have been reached?
-    reached_vs = Set{Int}()
-    reached_es = Set{Int}()
+    vs = Set{Int}()
+    es = Set{Int}()
 
     while length(Q) > 0
         v = dequeue!(Q)
-        push!(reached_vs, v)
+        push!(vs, v)
 
         for out_e in keys(hg.hg_tail.v2he[v])
             # Following pseudocode exactly. This feels awkward; how slow would it be to just query reached_vs?
-            state.hes_tail_count[out_e] -= 1
+            hes_tail_count[out_e] -= 1
 
-            if state.hes_tail_count[out_e] == 0
-                push!(reached_es, out_e)
+            if hes_tail_count[out_e] == 0
+                push!(es, out_e)
 
                 for w in keys(hg.hg_head.he2v[out_e])
-                    if !state.reached_vs[w]
+                    if !reached_vs[w]
                         enqueue!(Q, w)
-                        state.reached_vs[w] = true
+                        reached_vs[w] = true
                     end
                 end
             end
         end
     end
 
-    # Restore state
-    for v in reached_vs
-        state.reached_vs[v] = false
-        for out_e in keys(hg.hg_tail.v2he[v])
-            state.hes_tail_count[out_e] += 1
-        end
-    end
-
     # Return reached vertices and hyperedges
-    return (reached_vs, reached_es)
+    return (vs, es)
 end
 
 """
     backward_traceable(
         hg::H,
         target::Int,
-        state::DiHyperPathState{T}
-    ) where {H <: AbstractDirectedHypergraph, T <: Real}
+    ) where {H <: AbstractDirectedHypergraph}
 
     Traverses a hypergraph `hg` starting from vertex with index `target` to determine all other vertices and hyperedges
     that are reachable, following hyperedges along their reverse direction (i.e., from head to tail).
-
-    `DiHyperPathState` `state` is used to track what vertices/hyperedges have been traversed.
 """
 function backward_traceable(
     hg::H,
     target::Int,
-    state::DiHyperPathState{T}
-) where {H<:AbstractDirectedHypergraph,T<:Real}
+) where {H<:AbstractDirectedHypergraph}
     # Priority queue of reached vertices
     Q = Queue{Int}()
     enqueue!(Q, target)
 
-    state.reached_vs[target] = true
+    reached_vs = BitVector(falses(nhv(hg)))
+    reached_vs[target] = true
+
+    marked_hes = BitVector(falses(nhe(hg)))
 
     # Which vertices/hyperedges have been reached?
-    reached_vs = Set{Int}()
-    reached_es = Set{Int}()
+    vs = Set{Int}()
+    es = Set{Int}()
 
     while length(Q) > 0
         v = dequeue!(Q)
-        push!(reached_vs, v)
+        push!(vs, v)
 
         for in_e in keys(hg.hg_head.v2he[v])
-            if !state.marked_hes[in_e]
-                push!(reached_es, in_e)
-                state.marked_hes[in_e] = true
+            if !marked_hes[in_e]
+                push!(es, in_e)
+                marked_hes[in_e] = true
 
                 for w in keys(hg.hg_tail.he2v[in_e])
-                    if !state.reached_vs[w]
+                    if !reached_vs[w]
                         enqueue!(Q, w)
-                        state.reached_vs[w] = true
+                        reached_vs[w] = true
                     end
                 end
             end
         end
     end
 
-    # Restore state
-    for v in reached_vs
-        state.reached_vs[v] = false
-    end
-    for he in reached_es
-        state.marked_hes[he] = false
-    end
-
     # Return reached vertices and hyperedges
-    return (reached_vs, reached_es)
+    return (vs, es)
 end
 
 
@@ -248,16 +147,27 @@ function shortest_hyperpath_kk_heuristic(
     hyperedge_weights::Vector{T}
 ) where {H<:AbstractDirectedHypergraph,T<:Real}
 
-    state = initialize_dihyperpath_state(hg, hyperedge_weights)
+    reached_vs = BitVector(falses(nhv(hg)))
+    reached_vs[source] = true
+
+    marked_hes = BitVector(falses(nhe(hg)))
+    removed_hes = BitVector(falses(nhe(hg)))
+
+    hyperedge_inedges = [Set{Int}() for _ in 1:nhe(hg)]
+    hes_tail_count = length.(keys.(hg.hg_tail.he2v))
+
+    hyperedge_costs = fill(typemax(T), nhe(hg))
+
+    hyperedge_heap_points = Vector{Union{Nothing,Int}}(nothing, nhe(hg))
 
     # Verify that the target can be reached
-    fr = forward_reachable(hg, source, state)
+    fr = forward_reachable(hg, source)
     @assert target ∈ fr[1]
 
     # Doubly reachable hyperedges
     dr_hes = sort!(collect(intersect(
         fr[2],
-        backward_traceable(hg, target, state)[2]
+        backward_traceable(hg, target)[2]
     )))
 
     # Eliminate non-doubly reachable hyperedges
@@ -270,52 +180,60 @@ function shortest_hyperpath_kk_heuristic(
     for out_e in keys(hg.hg_tail.v2he[source])
         # If only the source is needed for this hyperedge
         if length(hg.hg_tail.he2v[out_e]) == 1
-            state.edge_heap_points[out_e] = push!(Hmin, (state.edge_weights[out_e], out_e))
+            hyperedge_heap_points[out_e] = push!(Hmin, (hyperedge_weights[out_e], out_e))
         end
     end
 
-    state.reached_vs[source] = true
-
     while length(Hmin) > 0
         e = pop!(Hmin)[2]
-        state.removed_hes[e] = true
+        removed_hes[e] = true
 
-        path = short_hyperpath_vhe(hg, source, e, state)
-        state.edge_costs[e] = sum(state.edge_weights[x] for x in path)
+        path = short_hyperpath_vhe(hg, source, e, hyperedge_inedges, hyperedge_costs)
+        hyperedge_costs[e] = sum(hyperedge_weights[x] for x in path)
 
         out_edges = Set{Int}()
         for v in keys(hg.hg_head.he2v[e])
             for f in keys(hg.hg_tail.v2he[v])
-                if !state.marked_hes[f]
-                    push!(out_edges, f)
-                    state.marked_hes[f] = true
-
-                    if !state.reached_vs[v]
-                        state.hes_tail_count[f] -= 1
+                if !marked_hes[f]
+                    if !reached_vs[v]
+                        hes_tail_count[f] -= 1
+                    end
+                    
+                    if hes_tail_count[f] == 0
+                        push!(out_edges, f)
+                        marked_hes[f] = true
                     end
                 end
             end
-            state.reached_vs[v] = true
+            reached_vs[v] = true
         end
 
         for f in out_edges
-            state.marked_hes[f] = false
+            marked_hes[f] = false
+        end
 
-            push!(state.he_inedges[f], e)
-            if !isnothing(state.edge_heap_points[f]) && !state.removed_hes[f]
+        for f in out_edges
+            push!(hyperedge_inedges[f], e)
+            if !isnothing(hyperedge_heap_points[f]) && !removed_hes[f]
                 update!(
                     Hmin,
-                    state.edge_heap_points[f],
+                    hyperedge_heap_points[f],
                     (
-                        sum(state.edge_weights[x] for x in short_hyperpath_vhe(hg, source, f, state)),
+                        sum(
+                            hyperedge_weights[x]
+                            for x in short_hyperpath_vhe(hg, source, f, hyperedge_inedges, hyperedge_costs)
+                        ),
                         f
                     )
                 )
-            elseif isnothing(state.edge_heap_points[f]) && state.hes_tail_count[f] == 0
-                state.edge_heap_points[f] = push!(
+            elseif isnothing(hyperedge_heap_points[f]) && hes_tail_count[f] == 0
+                hyperedge_heap_points[f] = push!(
                     Hmin,
                     (
-                        sum(state.edge_weights[x] for x in short_hyperpath_vhe(hg, source, f, state)),
+                        sum(
+                            hyperedge_weights[x]
+                            for x in short_hyperpath_vhe(hg, source, f, hyperedge_inedges, hyperedge_costs)
+                        ),
                         f
                     )
                 )
@@ -325,19 +243,11 @@ function shortest_hyperpath_kk_heuristic(
 
     path = Set{Int}()
     cost = typemax(T)
-    inedges = keys(hg.hg_head.v2he[target])
-    @info "Target inedges: $inedges"
-    @info "All inedges:"
-    for i in 1:nhe(hg)
-        inedges_i = state.he_inedges[i]
-        @info "\t$i: $inedges_i"
-    end
-    for in_e in inedges
-        if !isnothing(state.edge_heap_points[in_e])
-            p = short_hyperpath_vhe(hg, source, in_e, state)
-            cost_p = sum(state.edge_weights[e] for e in p)
+    for in_e in keys(hg.hg_head.v2he[target])
+        if !isnothing(hyperedge_heap_points[in_e])
+            p = short_hyperpath_vhe(hg, source, in_e, hyperedge_inedges, hyperedge_costs)
+            cost_p = sum(hyperedge_weights[e] for e in p)
             if cost_p < cost
-                @info "Updating to: path $p with cost $cost_p"
                 path = p
                 cost = cost_p
             end
@@ -445,24 +355,25 @@ end
         hg::H,
         v::Int,
         he::Int,
-        state::DiHyperPathState{T}
     ) where {H <: AbstractDirectedHypergraph, T <: Real}
 
     Obtain a (relatively, but not necessarily optimally) short hyperpath in hypergraph `hg` from a vertex `v` to a
-    hyperedge `he`, using `state` to track the hypergraph traversal during pathfinding. `short_hyperpath_vhe` uses a
-    greedy algorithm to first select hyperedges for a superpath and then prune unnecessary hyperedges to achieve a
-    (generally shorter) hyperpath. 
+    hyperedge `he`, `short_hyperpath_vhe` uses a greedy algorithm to first select hyperedges for a superpath and then
+    prune unnecessary hyperedges to achieve a (generally shorter) hyperpath. 
 """
 function short_hyperpath_vhe(
     hg::H,
     v::Int,
     he::Int,
-    state::DiHyperPathState{T}
-) where {H<:AbstractDirectedHypergraph,T<:Real}
+    he_inedges::Vector{Set{Int}},
+    he_costs::Vector{T}
+) where {H<:AbstractDirectedHypergraph, T<:Real}
+    marked_hes = BitVector(falses(nhe(hg)))
+
     Q = Queue{Int}()
-    for e in state.he_inedges[he]
+    for e in he_inedges[he]
         enqueue!(Q, e)
-        state.marked_hes[e] = true
+        marked_hes[e] = true
     end
 
     superpath = Set{Int}(he)
@@ -473,20 +384,16 @@ function short_hyperpath_vhe(
         e = dequeue!(Q)
         push!(superpath, e)
 
-        for f in state.he_inedges[e]
-            if !state.marked_hes[f]
+        for f in he_inedges[e]
+            if !marked_hes[f]
                 enqueue!(Q, f)
-                state.marked_hes[f] = true
+                marked_hes[f] = true
             end
         end
     end
 
-    for e in superpath
-        state.marked_hes[e] = false
-    end
-
     # TODO: try to be more clever about this
-    superpath = sort(collect(superpath), by=x -> state.edge_costs[x], rev=true)
+    superpath = sort(collect(superpath), by=x -> he_costs[x], rev=true)
     hg_copy = deepcopy(hg)
     # Eliminate all hyperedges not on superpath
     hg_copy.hg_tail[:, InvertedIndices.Not(superpath)] .= nothing
@@ -501,7 +408,7 @@ function short_hyperpath_vhe(
         hg_copy.hg_head[:, e] .= nothing
 
         # Only if hyperedge is essential for reaching target,
-        if !is_reachable(hg_copy, v, he, :hyperedge, state)
+        if !is_reachable(hg_copy, v, he, :hyperedge)
             # Restore hyperedge to hypergraph copy
             hg_copy[:, e] .= hg[:, e]
             push!(path, e)
@@ -517,8 +424,7 @@ end
         source::Int,
         target::Int,
         target_type::Symbol,
-        state::DiHyperPathState{T}
-    ) where {H <: AbstractDirectedHypergraph, T <: Real}
+    ) where {H <: AbstractDirectedHypergraph}
 
     TODO: this
 
@@ -527,12 +433,11 @@ function is_reachable(
     hg::H,
     source::Int,
     target::Int,
-    target_type::Symbol,
-    state::DiHyperPathState{T}
-) where {H<:AbstractDirectedHypergraph,T<:Real}
+    target_type::Symbol
+) where {H<:AbstractDirectedHypergraph}
     @assert target_type ∈ [:vertex, :hyperedge] "`target_type` must be :vertex or :hyperedge"
 
-    fr = forward_reachable(hg, source, state)
+    fr = forward_reachable(hg, source)
 
     #TODO: make a short-circuiting version of this. Can't for the life of me figure out why this isn't working...
     if target_type === :vertex
@@ -553,10 +458,7 @@ function get_hyperpath(hg::H, source::Int, target::Int, out::Set{Int}) where {H<
     hg_copy = deepcopy(hg)
     hg_copy[:, sort(collect(out))] .= nothing
 
-    weights = ones(nhe(hg_copy))
-    state = initialize_dihyperpath_state(hg_copy, weights)
-
-    reached_vs, reached_es = forward_reachable(hg_copy, source, state)
+    reached_vs, reached_es = forward_reachable(hg_copy, source)
 
     # Path does not exist
     if target ∉ reached_vs
@@ -569,8 +471,8 @@ function get_hyperpath(hg::H, source::Int, target::Int, out::Set{Int}) where {H<
     for e in reached_es
         hg_copy[:, e] .= nothing
 
-        # Only if hyperedge is essential for reaching target,
-        if !is_reachable(hg_copy, source, target, :vertex, state)
+        # Only retain if hyperedge is essential for reaching target
+        if !is_reachable(hg_copy, source, target, :vertex)
             # Restore hyperedge to hypergraph copy
             hg_copy[:, e] .= hg[:, e]
             push!(path, e)
@@ -707,14 +609,12 @@ function initialize_ilp_model(
     hg::H,
     source::Int,
     target::Int,
-    hyperedge_weights::Vector{T}) where {H<:AbstractDirectedHypergraph,T<:Real}
-
-    # Initialize state
-    state = initialize_dihyperpath_state(hg, hyperedge_weights)
+    hyperedge_weights::Vector{T}
+) where {H<:AbstractDirectedHypergraph, T<:Real}
 
     # First, verify that the problem is well-posed
     # That is, can `target` be reached from `source`
-    @assert is_reachable(hg, source, target, :vertex, state)
+    @assert is_reachable(hg, source, target, :vertex)
 
     # Initialize integer linear programming model
     model = Model(GLPK.Optimizer)
@@ -756,11 +656,11 @@ function initialize_ilp_model(
 
     # Distance-based inequalities
     dist_ests = fill(typemax(T), nhv(hg))
-    for v in forward_reachable(hg, source, state)[1]
+    for v in forward_reachable(hg, source)[1]
         # TODO: this is inefficient
         # Currently, will repeat a lot of work
         dist_ests[v] = sum(
-            state.edge_weights[e] for e in shortest_hyperpath_kk_heuristic(hg, source, v, hyperedge_weights)
+            hyperedge_weights[e] for e in shortest_hyperpath_kk_heuristic(hg, source, v, hyperedge_weights)
         )
     end
 
@@ -789,10 +689,9 @@ function initialize_ilp_model(
     end
 
     # Define objective function
-    @objective(model, Min, dot(x, state.edge_weights))
+    @objective(model, Min, dot(x, hyperedge_weights))
 
     return model, x, cuts, crosses
-
 end
 
 """
