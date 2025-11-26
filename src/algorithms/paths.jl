@@ -456,7 +456,9 @@ end
 function get_hyperpath(hg::H, source::Int, target::Int, out::Set{Int}) where {H<:AbstractDirectedHypergraph}
     # Remove excluded hyperedges
     hg_copy = deepcopy(hg)
-    hg_copy[:, sort(collect(out))] .= nothing
+    inds = sort(collect(out))
+    hg_copy.hg_tail[:, inds] .= nothing
+    hg_copy.hg_head[:, inds] .= nothing
 
     reached_vs, reached_es = forward_reachable(hg_copy, source)
 
@@ -469,7 +471,8 @@ function get_hyperpath(hg::H, source::Int, target::Int, out::Set{Int}) where {H<
 
     # Try to minimize the size of the path by eliminating unnecessary hyperedges
     for e in reached_es
-        hg_copy[:, e] .= nothing
+        hg_copy.hg_tail[:, e] .= nothing
+        hg_copy.hg_head[:, e] .= nothing
 
         # Only retain if hyperedge is essential for reaching target
         if !is_reachable(hg_copy, source, target, :vertex)
@@ -530,7 +533,11 @@ function all_hyperpaths(hg::H, source::Int, target::Int) where {H<:AbstractDirec
     paths
 end
 
-function all_hyperpaths(hg::H, source::Int, targets::Set{Int}) where {H<:AbstractDirectedHypergraph}
+function all_hyperpaths(
+    hg::DirectedHypergraph{T,V,E,D},
+    source::Int,
+    targets::Set{Int}
+) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -552,7 +559,11 @@ function all_hyperpaths(hg::H, source::Int, targets::Set{Int}) where {H<:Abstrac
     return Set(setdiff(p, Set{Int}(meta_he)) for p in paths)
 end
 
-function all_hyperpaths(hg::H, sources::Set{Int}, target::Int) where {H<:AbstractDirectedHypergraph}
+function all_hyperpaths(
+    hg::DirectedHypergraph{T,V,E,D},
+    sources::Set{Int},
+    target::Int
+) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -574,7 +585,11 @@ function all_hyperpaths(hg::H, sources::Set{Int}, target::Int) where {H<:Abstrac
     return Set(setdiff(p, Set{Int}(meta_he)) for p in paths)
 end
 
-function all_hyperpaths(hg::H, sources::Set{Int}, targets::Set{Int}) where {H<:AbstractDirectedHypergraph}
+function all_hyperpaths(
+    hg::DirectedHypergraph{T,V,E,D},
+    sources::Set{Int},
+    targets::Set{Int}
+) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem

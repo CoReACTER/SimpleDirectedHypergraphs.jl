@@ -514,6 +514,9 @@ end;
     @test shortest_hyperpath_kk_heuristic(dh2, Set{Int}([4,5]), 1, w2) == Set{Int}([7,9])
     @test shortest_hyperpath_kk_heuristic(dh2, Set{Int}([2, 3]), Set{Int}([4, 1]), w2) == Set{Int}([2,7])
 
+    # Test generation of all possible paths
+    @test length(all_hyperpaths(dh2, 1, 5)) == 2
+
     # Example adapted from Blau et al., DOI: 10.1039/D0SC05647B
     tail_3 = [
         true true true true nothing nothing nothing nothing nothing nothing nothing
@@ -565,6 +568,12 @@ end;
 
     # Test heuristic (but usually accurate) shortest-path algorithm
     @test shortest_hyperpath_kk_heuristic(dh3, 1, 9, w3) == Set{Int}([1, 6, 11])
+
+    # Test generation of all possible paths
+    @test length(all_hyperpaths(dh3, 1, 9)) == 6
+    @test length(all_hyperpaths(dh3, 1, Set{Int}([8, 9]))) == 9
+    @test length(all_hyperpaths(dh3, Set{Int}([1,8]), 9)) == 1
+    @test length(all_hyperpaths(dh3, Set{Int}([2,6]), Set{Int}([8,9]))) == 2
 end;
 
 @testset "SimpleDirectedHypergraphs diameter               " begin
