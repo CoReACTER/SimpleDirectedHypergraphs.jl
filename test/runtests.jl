@@ -539,7 +539,7 @@ end;
     ]
     dh3 = DirectedHypergraph(tail_3, head_3)
 
-    w3 = [3, 7, 19, 10, 13, 11, 1, 12, 8, 2, 22]
+    w3 = [1, 6, 2, 4, 3, 1, 2, 2, 4, 1, 1]
 
     # Traversing forward from vertices to vertices/hyperedges
     fr = forward_reachable(dh3, 1)
@@ -563,6 +563,8 @@ end;
     @test bt[1] == Set{Int}(1:9)
     @test bt[2] == Set{Int}(1:11)
 
+    # Test heuristic (but usually accurate) shortest-path algorithm
+    @test shortest_hyperpath_kk_heuristic(dh3, 1, 9, w3) == Set{Int}([1, 6, 11])
 end;
 
 @testset "SimpleDirectedHypergraphs diameter               " begin
