@@ -722,8 +722,10 @@ keyword parameters.
 """
 function SimpleHypergraphs.add_hyperedge!(
     h::DirectedHypergraph{T,V,E,D};
-    vertices_tail::D=D(), vertices_head::D=D(),
-    he_meta_tail::Union{E,Nothing}=nothing, he_meta_head::Union{E,Nothing}=nothing
+    vertices_tail::D=D(),
+    vertices_head::D=D(),
+    he_meta_tail::Union{E,Nothing}=nothing,
+    he_meta_head::Union{E,Nothing}=nothing
 ) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
     @boundscheck (checkbounds(h.hg_tail, k, 1) for k in keys(vertices_tail))
     @boundscheck (checkbounds(h.hg_head, 1, k) for k in keys(vertices_head))

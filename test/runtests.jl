@@ -483,14 +483,10 @@ end;
     for i in 1:nhv(dh2)
         # In this example, all nodes (and hyperedges) can be reached from anywhere
         for j in 1:nhv(dh2)
-            @testset "Test DH2: v$i\t -> v$j" begin
-                @test is_reachable(dh2, i, j, :vertex)
-            end
+            @test is_reachable(dh2, i, j, :vertex)
         end
         for e in 1:nhe(dh2)
-            @testset "Test DH2: v$i\t -> he$e" begin
-                @test is_reachable(dh2, i, e, :hyperedge)
-            end
+            @test is_reachable(dh2, i, e, :hyperedge)
         end
     end
     @test_throws AssertionError is_reachable(dh2, 1, 2, :test)
@@ -508,8 +504,15 @@ end;
         Set{Int}(4)
     ]
 
+    # Test method to find a reasonably short path from a vertex to a hyperedge
     short_path = SimpleDirectedHypergraphs.short_hyperpath_vhe(dh2, 1, 4, he_inedges, w2)
     @test short_path == Set{Int}([1,2,4]) || short_path == Set{Int}([1,3,4])
+
+    # Test heuristic (but usually accurate) shortest-path algorithm
+    @test shortest_hyperpath_kk_heuristic(dh2, 1, 5, w2) == Set{Int}([1,2,4])
+    @test shortest_hyperpath_kk_heuristic(dh2, 1, Set{Int}([3,4]), w2) == Set{Int}([1,2])
+    @test shortest_hyperpath_kk_heuristic(dh2, Set{Int}([4,5]), 1, w2) == Set{Int}([7,9])
+    @test shortest_hyperpath_kk_heuristic(dh2, Set{Int}([2, 3]), Set{Int}([4, 1]), w2) == Set{Int}([2,7])
 
     # Example adapted from Blau et al., DOI: 10.1039/D0SC05647B
     tail_3 = [

@@ -261,24 +261,24 @@ function shortest_hyperpath_kk_heuristic(
     hg::DirectedHypergraph{T,V,E,D},
     source::Int,
     targets::Set{Int},
-    hyperedge_weights::Vector{T}
-) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
+    hyperedge_weights::Vector{S}
+) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
     # The hyperedge from the targets to the metatarget will have a cost of 0 associated with it
-    metatarget = add_vertex!(hg_copy)
-    meta_he = add_hyperedge!(
+    metatarget = SimpleHypergraphs.add_vertex!(hg_copy)
+    meta_he = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
         vertices_tail=D(x => convert(T, 0) for x in targets),
-        vertices_head=D(metatarget, convert(T, 0))
+        vertices_head=D(metatarget => convert(T, 0))
     )
 
     path = shortest_hyperpath_kk_heuristic(
         hg_copy,
         source,
         metatarget,
-        vcat(hyperedge_weights, convert(T, 0))
+        vcat(hyperedge_weights, convert(S, 0))
     )
 
     # Remove the fictitious hyperedge from the targets to the metatarget
@@ -289,16 +289,16 @@ function shortest_hyperpath_kk_heuristic(
     hg::DirectedHypergraph{T,V,E,D},
     sources::Set{Int},
     target::Int,
-    hyperedge_weights::Vector{T}
-) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
+    hyperedge_weights::Vector{S}
+) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
     # The hyperedge from the metasource to the sources will have a cost of 0 associated with it
-    metasource = add_vertex!(hg_copy)
-    meta_he = add_hyperedge!(
+    metasource = SimpleHypergraphs.add_vertex!(hg_copy)
+    meta_he = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
-        vertices_tail=D(metasource, convert(T, 0)),
+        vertices_tail=D(metasource => convert(T, 0)),
         vertices_head=D(x => convert(T, 0) for x in sources)
     )
 
@@ -306,7 +306,7 @@ function shortest_hyperpath_kk_heuristic(
         hg_copy,
         metasource,
         target,
-        vcat(hyperedge_weights, convert(T, 0))
+        vcat(hyperedge_weights, convert(S, 0))
     )
 
     # Remove the fictitious hyperedge from the metasource to the sources
@@ -317,33 +317,33 @@ function shortest_hyperpath_kk_heuristic(
     hg::DirectedHypergraph{T,V,E,D},
     sources::Set{Int},
     targets::Set{Int},
-    hyperedge_weights::Vector{T}
-) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
+    hyperedge_weights::Vector{S}
+) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
     # The hyperedge from the metasource to the sources will have a cost of 0 associated with it
-    metasource = add_vertex!(hg_copy)
-    meta_he_source = add_hyperedge!(
+    metasource = SimpleHypergraphs.add_vertex!(hg_copy)
+    meta_he_source = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
-        vertices_tail=D(metasource, convert(T, 0)),
+        vertices_tail=D(metasource => convert(T, 0)),
         vertices_head=D(x => convert(T, 0) for x in sources)
     )
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
     # The hyperedge from the targets to the metatarget will have a cost of 0 associated with it
-    metatarget = add_vertex!(hg_copy)
-    meta_he_target = add_hyperedge!(
+    metatarget = SimpleHypergraphs.add_vertex!(hg_copy)
+    meta_he_target = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
         vertices_tail=D(x => convert(T, 0) for x in targets),
-        vertices_head=D(metatarget, convert(T, 0))
+        vertices_head=D(metatarget => convert(T, 0))
     )
 
     path = shortest_hyperpath_kk_heuristic(
         hg_copy,
         metasource,
         metatarget,
-        vcat(hyperedge_weights, [convert(T, 0), convert(T, 0)])
+        vcat(hyperedge_weights, [convert(S, 0), convert(S, 0)])
     )
 
     # Remove fictitious hyperedges
@@ -535,11 +535,11 @@ function all_hyperpaths(hg::H, source::Int, targets::Set{Int}) where {H<:Abstrac
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
     # The hyperedge from the targets to the metatarget will have a cost of 0 associated with it
-    metatarget = add_vertex!(hg_copy)
-    meta_he = add_hyperedge!(
+    metatarget = SimpleHypergraphs.add_vertex!(hg_copy)
+    meta_he = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
         vertices_tail=D(x => convert(T, 0) for x in targets),
-        vertices_head=D(metatarget, convert(T, 0))
+        vertices_head=D(metatarget => convert(T, 0))
     )
 
     paths = all_hyperpaths(
@@ -557,10 +557,10 @@ function all_hyperpaths(hg::H, sources::Set{Int}, target::Int) where {H<:Abstrac
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
     # The hyperedge from the metasource to the sources will have a cost of 0 associated with it
-    metasource = add_vertex!(hg_copy)
-    meta_he = add_hyperedge!(
+    metasource = SimpleHypergraphs.add_vertex!(hg_copy)
+    meta_he = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
-        vertices_tail=D(metasource, convert(T, 0)),
+        vertices_tail=D(metasource => convert(T, 0)),
         vertices_head=D(x => convert(T, 0) for x in sources)
     )
 
@@ -579,20 +579,20 @@ function all_hyperpaths(hg::H, sources::Set{Int}, targets::Set{Int}) where {H<:A
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
     # The hyperedge from the metasource to the sources will have a cost of 0 associated with it
-    metasource = add_vertex!(hg_copy)
-    meta_he_source = add_hyperedge!(
+    metasource = SimpleHypergraphs.add_vertex!(hg_copy)
+    meta_he_source = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
-        vertices_tail=D(metasource, convert(T, 0)),
+        vertices_tail=D(metasource => convert(T, 0)),
         vertices_head=D(x => convert(T, 0) for x in sources)
     )
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
     # The hyperedge from the targets to the metatarget will have a cost of 0 associated with it
-    metatarget = add_vertex!(hg_copy)
-    meta_he_target = add_hyperedge!(
+    metatarget = SimpleHypergraphs.add_vertex!(hg_copy)
+    meta_he_target = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
         vertices_tail=D(x => convert(T, 0) for x in targets),
-        vertices_head=D(metatarget, convert(T, 0))
+        vertices_head=D(metatarget => convert(T, 0))
     )
 
     paths = all_hyperpaths(
@@ -778,11 +778,11 @@ function shortest_hyperpath_kk_ilp(
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
     # The hyperedge from the targets to the metatarget will have a cost of 0 associated with it
-    metatarget = add_vertex!(hg_copy)
-    meta_he = add_hyperedge!(
+    metatarget = SimpleHypergraphs.add_vertex!(hg_copy)
+    meta_he = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
         vertices_tail=D(x => convert(T, 0) for x in targets),
-        vertices_head=D(metatarget, convert(T, 0))
+        vertices_head=D(metatarget => convert(T, 0))
     )
 
     path = shortest_hyperpath_kk_ilp(
@@ -806,10 +806,10 @@ function shortest_hyperpath_kk_ilp(
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
     # The hyperedge from the metasource to the sources will have a cost of 0 associated with it
-    metasource = add_vertex!(hg_copy)
-    meta_he = add_hyperedge!(
+    metasource = SimpleHypergraphs.add_vertex!(hg_copy)
+    meta_he = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
-        vertices_tail=D(metasource, convert(T, 0)),
+        vertices_tail=D(metasource => convert(T, 0)),
         vertices_head=D(x => convert(T, 0) for x in sources)
     )
 
@@ -834,20 +834,20 @@ function shortest_hyperpath_kk_ilp(
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
     # The hyperedge from the metasource to the sources will have a cost of 0 associated with it
-    metasource = add_vertex!(hg_copy)
-    meta_he_source = add_hyperedge!(
+    metasource = SimpleHypergraphs.add_vertex!(hg_copy)
+    meta_he_source = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
-        vertices_tail=D(metasource, convert(T, 0)),
+        vertices_tail=D(metasource => convert(T, 0)),
         vertices_head=D(x => convert(T, 0) for x in sources)
     )
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
     # The hyperedge from the targets to the metatarget will have a cost of 0 associated with it
-    metatarget = add_vertex!(hg_copy)
-    meta_he_target = add_hyperedge!(
+    metatarget = SimpleHypergraphs.add_vertex!(hg_copy)
+    meta_he_target = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
         vertices_tail=D(x => convert(T, 0) for x in targets),
-        vertices_head=D(metatarget, convert(T, 0))
+        vertices_head=D(metatarget => convert(T, 0))
     )
 
     path = shortest_hyperpath_kk_ilp(
