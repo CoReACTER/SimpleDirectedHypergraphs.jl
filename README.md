@@ -58,6 +58,7 @@ Currently, this package is rather lean. Currently implemented features include:
 - A concrete `DirectedHypergraph` type, which can be constructed directly, using `Graphs.jl` `SimpleDiGraph`, or using matrices.
 - Extensions of some `SimpleHypergraphs.jl` functionality, including functions to modify directed hypergraphs (*e.g.*, by pruning or adding hyperedges), bipartite and two-section views, and random hypergraph models
 - Simple input/output operations, *e.g.*, to JSON
-- Algorithms to detect weakly and strongly connected components, with the latter based on the work of Francisco José Martín-Recuerda Moyano (PhD dissertation, 2016).
+- Algorithms to detect weakly and strongly connected components, with the latter based on the work of Francisco José Martín-Recuerda Moyano (PhD dissertation, 2016)
+- Shortest-path, distance, and diameter algorithms, based on the work of Krieger & Kececioglu (DOI: [10.1186/s13015-022-00217-9](https://doi.org/10.1186/s13015-022-00217-9) and DOI: [10.1089/cmb.2023.0242](http://doi.org/10.1089/cmb.2023.0242))
 
 If you have suggestions of features that you want added, please make suggestions in the [GitHub Issues](https://github.com/CoReACTER/SimpleDirectedHypergraphs.jl/issues) page. You are also encouraged to add new features yourself; pull requests are always welcome.
