@@ -1,7 +1,7 @@
 name = "SimpleDirectedHypergraphs"
 uuid = "a42c6b43-640c-4761-b4a8-4f98c31d02e9"
 authors = ["Evan Walter Clark Spotte-Smith"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
