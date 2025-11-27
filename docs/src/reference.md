@@ -121,9 +121,8 @@ Pathfinding
 -----------
 ```@docs
 
-_visit(h::H, v::Int) where {H <: AbstractDirectedHypergraph}
-SimpleHypergraphs.shortest_path(b::BipartiteView{H}, source::Int, target::Int) where {H<:AbstractDirectedHypergraph}
-SimpleHypergraphs.shortest_path(t::TwoSectionView{H}, source::Int, target::Int) where {H<:AbstractDirectedHypergraph}
+SimpleHypergraphs.shortest_path(::BipartiteView{H}, ::Int, ::Int) where {H<:AbstractDirectedHypergraph}
+SimpleHypergraphs.shortest_path(::TwoSectionView{H}, ::Int, ::Int) where {H<:AbstractDirectedHypergraph}
 
 forward_reachable(::H, ::Int) where {H<:AbstractDirectedHypergraph}
 backward_traceable(::H, ::Int) where {H<:AbstractDirectedHypergraph}
