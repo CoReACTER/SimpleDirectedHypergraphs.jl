@@ -578,13 +578,13 @@ end;
     @test length(all_hyperpaths(dh3, Set{Int}([2,6]), Set{Int}([8,9]))) == 2
 
     # Test exact (integer linear programming) shortest-path algorithm
-    model = initialize_ilp_model(dh3, 1, 9, w3)
+    model = SimpleDirectedHypergraphs.initialize_ilp_model(dh3, 1, 9, w3)
     @test JuMP.num_constraints(model[1], JuMP.VariableRef, JuMP.MOI.ZeroOne) == 11
     @test JuMP.num_constraints(model[1], JuMP.AffExpr, JuMP.MOI.GreaterThan{Float64}) == 20
     @test JuMP.solver_name(model[1]) == "GLPK"
     @test JuMP.objective_sense(model[1]) == JuMP.MIN_SENSE
     @test JuMP.num_variables(model[1]) == 11
-    @test_throws AssertionError initialize_ilp_model(dh3, 9, 1, w3)
+    @test_throws AssertionError SimpleDirectedHypergraphs.initialize_ilp_model(dh3, 9, 1, w3)
 
     @test shortest_hyperpath_kk_ilp(dh3, 1, 9, w3) == Set{Int}([1,6,11])
     @test shortest_hyperpath_kk_ilp(dh3, 1, Set{Int}([7,9]), w3) == Set{Int}([1,7,10])

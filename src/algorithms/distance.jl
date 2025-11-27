@@ -78,7 +78,7 @@ end
 """
     distance(
         hg::H,
-        distance_method::SnodeDistanceKKHeuristic,
+        distance_method::SnodeDistanceKKILP,
         hyperedge_weights::AbstractVector{T}
     ) where {H <: AbstractDirectedHypergraph}
 

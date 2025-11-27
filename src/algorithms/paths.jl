@@ -105,28 +105,28 @@ end
         hg::H,
         source::Int,
         target::Int,
-        hyperedge_weights::Vector{T}
+        hyperedge_weights::AbstractVector{T}
     ) where {H <: AbstractDirectedHypergraph, T <: Real}
 
     shortest_hyperpath_kk_heuristic(
         hg::DirectedHypergraph{T, V, E, D},
         source::Int,
         targets::Set{Int},
-        hyperedge_weights::Vector{T}
+        hyperedge_weights::AbstractVector{T}
     ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
 
     shortest_hyperpath_kk_heuristic(
         hg::DirectedHypergraph{T, V, E, D},
         sources::Set{Int},
         target::Int,
-        hyperedge_weights::Vector{T}
+        hyperedge_weights::AbstractVector{T}
     ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
 
     shortest_hyperpath_kk_heuristic(
         hg::DirectedHypergraph{T, V, E, D},
         sources::Set{Int},
         targets::Set{Int},
-        hyperedge_weights::Vector{T}
+        hyperedge_weights::AbstractVector{T}
     ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
 
     Implements the heuristic directed hypergraph pathfinding algorithm of Krieger & Kececioglu (2022),
@@ -144,7 +144,7 @@ function shortest_hyperpath_kk_heuristic(
     hg::H,
     source::Int,
     target::Int,
-    hyperedge_weights::Vector{T}
+    hyperedge_weights::AbstractVector{T}
 ) where {H<:AbstractDirectedHypergraph,T<:Real}
 
     reached_vs = BitVector(falses(nhv(hg)))
@@ -261,7 +261,7 @@ function shortest_hyperpath_kk_heuristic(
     hg::DirectedHypergraph{T,V,E,D},
     source::Int,
     targets::Set{Int},
-    hyperedge_weights::Vector{S}
+    hyperedge_weights::AbstractVector{S}
 ) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
 
@@ -289,7 +289,7 @@ function shortest_hyperpath_kk_heuristic(
     hg::DirectedHypergraph{T,V,E,D},
     sources::Set{Int},
     target::Int,
-    hyperedge_weights::Vector{S}
+    hyperedge_weights::AbstractVector{S}
 ) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
 
@@ -317,7 +317,7 @@ function shortest_hyperpath_kk_heuristic(
     hg::DirectedHypergraph{T,V,E,D},
     sources::Set{Int},
     targets::Set{Int},
-    hyperedge_weights::Vector{S}
+    hyperedge_weights::AbstractVector{S}
 ) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
 
@@ -366,7 +366,7 @@ function short_hyperpath_vhe(
     v::Int,
     he::Int,
     he_inedges::Vector{Set{Int}},
-    he_costs::Vector{T}
+    he_costs::AbstractVector{T}
 ) where {H<:AbstractDirectedHypergraph, T<:Real}
     marked_hes = BitVector(falses(nhe(hg)))
 
@@ -494,11 +494,23 @@ end
 """
     all_hyperpaths(hg::H, source::Int, target::Int) where {H <: AbstractDirectedHypergraph}
 
-    all_hyperpaths(hg::H, source::Int, targets::Set{Int}) where {H <: AbstractDirectedHypergraph}
+    all_hyperpaths(
+        hg::DirectedHypergraph{T,V,E,D},
+        source::Int,
+        targets::Set{Int}
+    ) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
 
-    all_hyperpaths(hg::H, sources::Set{Int}, target::Int) where {H <: AbstractDirectedHypergraph}    
+    all_hyperpaths(
+        hg::DirectedHypergraph{T,V,E,D},
+        sources::Set{Int},
+        target::Int
+    ) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
 
-    all_hyperpaths(hg::H, sources::Set{Int}, targets::Set{Int}) where {H <: AbstractDirectedHypergraph}
+    all_hyperpaths(
+        hg::DirectedHypergraph{T,V,E,D},
+        sources::Set{Int},
+        targets::Set{Int}
+    ) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
 
     Exhaustively (but efficiently) generate all hyperpaths in directed hypergraph `hg` from some source(s) to some
     target(s), using the algorithm described by Krieger & Kececioglu (2022), DOI: 10.1186/s13015-022-00217-9. 
@@ -626,11 +638,23 @@ function all_hyperpaths(
     return Set(setdiff(p, Set{Int}([meta_he_source, meta_he_target])) for p in paths)
 end
 
+"""
+    initialize_ilp_model(
+        hg::H,
+        source::Int,
+        target::Int,
+        hyperedge_weights::AbstractVector{T}
+    ) where {H<:AbstractDirectedHypergraph, T<:Real}
+
+    Define variables, objective, and initial constraints for integer linear programming-based optimization of hyperpaths
+    in hypergraph `hg` from vertex `source` to vertex `target`, where hyperedges have weights `hyperedge_weights`
+
+"""
 function initialize_ilp_model(
     hg::H,
     source::Int,
     target::Int,
-    hyperedge_weights::Vector{T}
+    hyperedge_weights::AbstractVector{T}
 ) where {H<:AbstractDirectedHypergraph, T<:Real}
 
     # First, verify that the problem is well-posed
@@ -721,28 +745,28 @@ end
         hg::H,
         source::Int,
         target::Int,
-        hyperedge_weights::Vector{T}
+        hyperedge_weights::AbstractVector{T}
     ) where {H<:AbstractDirectedHypergraph, T<:Real}
 
     shortest_hyperpath_kk_ilp(
         hg::DirectedHypergraph{T,V,E,D},
         source::Int,
         targets::Set{Int},
-        hyperedge_weights::Vector{S}
+        hyperedge_weights::AbstractVector{S}
     ) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
 
     shortest_hyperpath_kk_ilp(
         hg::DirectedHypergraph{T,V,E,D},
         sources::Set{Int},
         target::Int,
-        hyperedge_weights::Vector{S}
+        hyperedge_weights::AbstractVector{S}
     ) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
 
     shortest_hyperpath_kk_ilp(
         hg::DirectedHypergraph{T,V,E,D},
         sources::Set{Int},
         targets::Set{Int},
-        hyperedge_weights::Vector{S}
+        hyperedge_weights::AbstractVector{S}
     ) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
 
     Implements the exact directed hypergraph pathfinding algorithm of Krieger & Kececioglu (2023),
@@ -759,7 +783,7 @@ function shortest_hyperpath_kk_ilp(
     hg::H,
     source::Int,
     target::Int,
-    hyperedge_weights::Vector{T}
+    hyperedge_weights::AbstractVector{T}
 ) where {H<:AbstractDirectedHypergraph,T<:Real}
 
     # TODO: do I need to carry `x` over like this? Not sure about variable scope
@@ -794,7 +818,7 @@ function shortest_hyperpath_kk_ilp(
     hg::DirectedHypergraph{T,V,E,D},
     source::Int,
     targets::Set{Int},
-    hyperedge_weights::Vector{S}
+    hyperedge_weights::AbstractVector{S}
 ) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
 
@@ -822,7 +846,7 @@ function shortest_hyperpath_kk_ilp(
     hg::DirectedHypergraph{T,V,E,D},
     sources::Set{Int},
     target::Int,
-    hyperedge_weights::Vector{S}
+    hyperedge_weights::AbstractVector{S}
 ) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
 
@@ -850,7 +874,7 @@ function shortest_hyperpath_kk_ilp(
     hg::DirectedHypergraph{T,V,E,D},
     sources::Set{Int},
     targets::Set{Int},
-    hyperedge_weights::Vector{S}
+    hyperedge_weights::AbstractVector{S}
 ) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
 

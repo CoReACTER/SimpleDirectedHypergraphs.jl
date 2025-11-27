@@ -23,8 +23,8 @@ export to_undirected
 
 export get_weakly_connected_components, get_strongly_connected_components
 
-export forward_reachable, backward_traceable, is_reachable, get_hyperpath
-export all_hyperpaths, shortest_hyperpath_kk_heuristic, initialize_ilp_model, shortest_hyperpath_kk_ilp
+export forward_reachable, backward_traceable, is_reachable
+export all_hyperpaths, shortest_hyperpath_kk_heuristic, shortest_hyperpath_kk_ilp
 
 export SnodeDistanceKKHeuristic, SnodeDistanceKKILP
 
