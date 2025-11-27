@@ -121,10 +121,27 @@ Pathfinding
 -----------
 ```@docs
 
-_visit(h::H, v::Int) where {H <: AbstractDirectedHypergraph}
-SimpleHypergraphs.shortest_path(b::BipartiteView{H}, source::Int, target::Int) where {H<:AbstractDirectedHypergraph}
-SimpleHypergraphs.shortest_path(t::TwoSectionView{H}, source::Int, target::Int) where {H<:AbstractDirectedHypergraph}
+SimpleHypergraphs.shortest_path(::BipartiteView{H}, ::Int, ::Int) where {H<:AbstractDirectedHypergraph}
+SimpleHypergraphs.shortest_path(::TwoSectionView{H}, ::Int, ::Int) where {H<:AbstractDirectedHypergraph}
 
+forward_reachable(::H, ::Int) where {H<:AbstractDirectedHypergraph}
+backward_traceable(::H, ::Int) where {H<:AbstractDirectedHypergraph}
+is_reachable(::H, ::Int, ::Int, ::Symbol) where {H<:AbstractDirectedHypergraph}
+
+all_hyperpaths
+
+shortest_hyperpath_kk_heuristic
+
+shortest_hyperpath_kk_ilp
+
+SnodeDistanceKKHeuristic
+SnodeDistanceKKILP
+
+SimpleHypergraphs.distance(::H, ::SnodeDistanceKKHeuristic, ::AbstractVector{T}) where {H<:AbstractDirectedHypergraph, T<:Real}
+SimpleHypergraphs.distance(::H, ::SnodeDistanceKKILP, ::AbstractVector{T}) where {H<:AbstractDirectedHypergraph, T<:Real}
+
+Graphs.diameter(::H, ::SnodeDistanceKKHeuristic) where {H<:AbstractDirectedHypergraph}
+Graphs.diameter(::H, ::SnodeDistanceKKILP) where {H<:AbstractDirectedHypergraph}
 ```
 
 
