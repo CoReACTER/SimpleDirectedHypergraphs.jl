@@ -123,7 +123,7 @@ function Graphs.SimpleGraphs.fadj(t::TwoSectionView{H}) where {H<:AbstractDirect
         for v_tail in keys(vs_tail)
             for v_head in keys(vs_head)
                 if v_head != v_tail
-                    append!(res[v_tail], v_head)
+                    push!(res[v_tail], v_head)
                 end
             end
         end
@@ -145,7 +145,7 @@ function Graphs.SimpleGraphs.badj(t::TwoSectionView{H}) where {H<:AbstractDirect
         for v_tail in keys(vs_tail)
             for v_head in keys(vs_head)
                 if v_head != v_tail
-                    append!(res[v_head], v_tail)
+                    push!(res[v_head], v_tail)
                 end
             end
         end

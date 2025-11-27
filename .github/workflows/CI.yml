@@ -70,6 +70,7 @@ jobs:
           using Pkg
           Pkg.develop(PackageSpec(path=pwd()))
           Pkg.instantiate()
+          Pkg.add(name="OpenSSL_jll", version="3.0")
       - uses: julia-actions/julia-buildpkg@latest
       - uses: julia-actions/julia-docdeploy@latest
         env:
@@ -78,6 +79,7 @@ jobs:
       - name: Run doctests
         shell: julia --project=docs --color=yes {0}
         run: |
+          using OpenSSL_jll
           using Documenter: DocMeta, doctest
           using SimpleDirectedHypergraphs
           DocMeta.setdocmeta!(SimpleDirectedHypergraphs, :DocTestSetup, :(using SimpleDirectedHypergraphs); recursive=true)

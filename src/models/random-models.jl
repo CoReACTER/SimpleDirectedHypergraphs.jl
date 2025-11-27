@@ -164,3 +164,7 @@ function SimpleHypergraphs.random_dregular_model(
 
     HType(mx_tail, mx_head)
 end
+
+# TODO: preferential attachment
+# TODO: hypercurveball algorithm
+# YOU ARE HERE
