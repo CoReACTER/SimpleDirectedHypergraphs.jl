@@ -10,7 +10,7 @@ using Random
 using LinearAlgebra
 using SimpleTraits
 using InvertedIndices
-using JuMP: constraint, is_binary, Min, Model, objective, optimize!, set_start_value, value, variable
+import JuMP
 import GLPK
 
 export AbstractDirectedHypergraph

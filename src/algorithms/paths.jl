@@ -638,14 +638,14 @@ function initialize_ilp_model(
     @assert is_reachable(hg, source, target, :vertex)
 
     # Initialize integer linear programming model
-    model = Model(GLPK.Optimizer)
+    model = JuMP.Model(GLPK.Optimizer)
 
     # Create one binary variable for each hyperedge in `hg`
-    @variable(model, x[1:nhe(hg)], Bin)
-    set_start_value.(x, 1)
+    @JuMP.variable(model, x[1:nhe(hg)], Bin)
+    JuMP.set_start_value.(x, 1)
 
     # Verify that all variables are bound to be either 0 (not present in hyperpath) or 1 (present in hyperpath)
-    @assert all(is_binary.(x))
+    @assert all(JuMP.is_binary.(x))
 
     # Define initial constraints
     for i in 1:nhe(hg)
@@ -656,7 +656,7 @@ function initialize_ilp_model(
             end
 
             in_hes = collect(keys(hg.hg_head.v2he[v]))
-            @constraint(model, sum([x[ih] for ih in in_hes]) >= x[i])
+            @JuMP.constraint(model, sum([x[ih] for ih in in_hes]) >= x[i])
         end
 
         # Head-hitting inequalities
@@ -668,12 +668,12 @@ function initialize_ilp_model(
                 end
             end
 
-            @constraint(model, sum([x[j] for j in hits]) >= x[i])
+            @JuMP.constraint(model, sum([x[j] for j in hits]) >= x[i])
         end
     end
 
     # Target-production inequality
-    @constraint(model, sum([x[e] for e in keys(hg.hg_head.v2he[target])]) >= 1)
+    @JuMP.constraint(model, sum([x[e] for e in keys(hg.hg_head.v2he[target])]) >= 1)
 
     # Distance-based inequalities
     dist_ests = fill(typemax(T), nhv(hg))
@@ -707,11 +707,11 @@ function initialize_ilp_model(
         ]
         push!(crosses, BitVector(cross))
 
-        @constraint(model, dot(x, cross) >= 1)
+        @JuMP.constraint(model, dot(x, cross) >= 1)
     end
 
     # Define objective function
-    @objective(model, Min, dot(x, hyperedge_weights))
+    @JuMP.objective(model, Min, dot(x, hyperedge_weights))
 
     return model, x, cuts, crosses
 end
@@ -765,11 +765,11 @@ function shortest_hyperpath_kk_ilp(
     # TODO: do I need to carry `x` over like this? Not sure about variable scope
     model, x, cuts, crosses = initialize_ilp_model(hg, source, target, hyperedge_weights)
 
-    optimize!(model)
+    JuMP.optimize!(model)
 
     # Convert floating-point solution into BitVector
     # TODO: Is this necessary w/ JuMP? Or will the output really be binary? 
-    solution = value.(x) .> 0.5
+    solution = JuMP.value.(x) .> 0.5
 
     # Check for s,t-cuts that are not crossed by the current solution
     new_cuts, new_crosses = expand_cuts(hg, source, target, cuts, crosses, solution)
@@ -777,12 +777,12 @@ function shortest_hyperpath_kk_ilp(
     while length(new_cuts) > 0
         # Add new constraints to the model
         for cross in new_crosses
-            @constraint(model, dot(x, cross) >= 1)
+            @JuMP.constraint(model, dot(x, cross) >= 1)
         end
 
         # Re-optimize model with new cut-constraints
-        optimize!(model)
-        solution = value.(x) .> 0.5
+        JuMP.optimize!(model)
+        solution = JuMP.value.(x) .> 0.5
 
         new_cuts, new_crosses = expand_cuts(hg, source, target, new_cuts, new_crosses, solution)
     end
