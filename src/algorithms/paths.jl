@@ -423,11 +423,12 @@ end
         hg::H,
         source::Int,
         target::Int,
-        target_type::Symbol,
-    ) where {H <: AbstractDirectedHypergraph}
+        target_type::Symbol
+    ) where {H<:AbstractDirectedHypergraph}
 
-    TODO: this
-
+    Use `forward_reachable` to determine if `target` (either a vertex index, if `target_type === :vertex` or a
+    hyperedge index if `target_type === :hyperedge`) can be reached from vertex with index`source` in directed
+    hypergraph `hg`.
 """
 function is_reachable(
     hg::H,
@@ -448,7 +449,12 @@ function is_reachable(
 end
 
 """
-    get_hyperpath(hg::H, source::Int, target::Int, out::Set{Int}) where {H <: AbstractDirectedHypergraph}
+    get_hyperpath(
+        hg::H,
+        source::Int,
+        target::Int,
+        out::Set{Int}
+    ) where {H <: AbstractDirectedHypergraph}
 
     If one exists, obtain a hyperpath in directed hypergraph `hg` from a source vertex with index `source` to a target
     vertex with index `target`. The hyperpath cannot include any hyperedge with index included in the set `out`.
@@ -719,25 +725,25 @@ end
     ) where {H<:AbstractDirectedHypergraph, T<:Real}
 
     shortest_hyperpath_kk_ilp(
-        hg::H,
+        hg::DirectedHypergraph{T,V,E,D},
         source::Int,
         targets::Set{Int},
-        hyperedge_weights::Vector{T}
-    ) where {H<:AbstractDirectedHypergraph, T<:Real}
+        hyperedge_weights::Vector{S}
+    ) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
 
     shortest_hyperpath_kk_ilp(
-        hg::H,
+        hg::DirectedHypergraph{T,V,E,D},
         sources::Set{Int},
         target::Int,
-        hyperedge_weights::Vector{T}
-    ) where {H<:AbstractDirectedHypergraph, T<:Real}
+        hyperedge_weights::Vector{S}
+    ) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
 
     shortest_hyperpath_kk_ilp(
-        hg::H,
+        hg::DirectedHypergraph{T,V,E,D},
         sources::Set{Int},
         targets::Set{Int},
-        hyperedge_weights::Vector{T}
-    ) where {H<:AbstractDirectedHypergraph, T<:Real}
+        hyperedge_weights::Vector{S}
+    ) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
 
     Implements the exact directed hypergraph pathfinding algorithm of Krieger & Kececioglu (2023),
     DOI: 10.1089/cmb.2023.0242. This algorithm is guaranteed to find the optimal pathway from `source` to
@@ -885,9 +891,9 @@ end
         cuts::Vector{Set{Int}},
         crosses::Vector{BitVector},
         curr_sol::BitVector
-    ) where {H <: AbstractDirectedHypergraph}
+    ) where {H<:AbstractDirectedHypergraph}
 
-    A helper function for `shortest_hyperpath_kk_ilp`
+    A helper function for `shortest_hyperpath_kk_ilp`.
 
     Efficiently identify new `source`-`target` cuts of a directed hypergraph `hg` that are violated by current solution
     of the integer linear programming problem `curr_sol`.

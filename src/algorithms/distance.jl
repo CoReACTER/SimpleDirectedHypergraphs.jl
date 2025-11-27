@@ -1,8 +1,11 @@
 """
-    SnodeDistanceKKHeuristic(sources::Set{Int}, targets::Set{Int}) <: AbstractDistance
+    SnodeDistanceKKHeuristic <: AbstractDistance
 
-Represent a distance between a set of *source* nodes and a set of *target* nodes in a of directed hypergraph `h`,
-where a distance in this context is defined as the length of the shortest hyperpath that reaches all `t ∈ targets`.
+Constructor: SnodeDistanceKKHeuristic(sources::Set{Int}, targets::Set{Int}) <: AbstractDistance
+
+Represent a distance between a set of *source* nodes (`sources`) and a set of *target* nodes (`targets`) in a directed
+hypergraph, where a distance in this context is defined as the length of the shortest hyperpath that reaches all
+`t ∈ targets`.
 
 This approach uses the *heuristic* shortest hyperpath algorithm of Krieger & Kececioglu 2022
 (DOI: 10.1186/s13015-022-00217-9). The Krieger & Kececioglu heuristic algorithm commonly (but not always) returns the
@@ -15,15 +18,18 @@ struct SnodeDistanceKKHeuristic <: AbstractDistance
 end
 
 """
-    SnodeDistanceKKILP(sources::Set{Int}, targets::Set{Int}) <: AbstractDistance
+    SnodeDistanceKKILP <: AbstractDistance
 
-Represent a distance between a set of *source* nodes and a set of *target* nodes in a of directed hypergraph `h`,
-where a distance in this context is defined as the length of the shortest hyperpath that reaches all `t ∈ targets`.
+Constructor: SnodeDistanceKKILP(sources::Set{Int}, targets::Set{Int}) <: AbstractDistance
+
+Represent a distance between a set of *source* nodes (`sources`) and a set of *target* nodes (`targets`) in a directed
+hypergraph, where a distance in this context is defined as the length of the shortest hyperpath that reaches all
+`t ∈ targets`.
 
 This approach uses the *exact* shortest hyperpath algorithm of Krieger & Kececioglu 2023 (DOI: 10.1089/cmb.2023.0242).
 The Krieger & Kececioglu algorithm solves an integer linear programming formalism related to hypergraph cutting.
 
-For a lower-cost heuristic algorith, see `SnodeDistanceKKHeuristic`.
+For a lower-cost heuristic algorithm, see `SnodeDistanceKKHeuristic`.
 """
 struct SnodeDistanceKKILP <: AbstractDistance
     sources::Set{Int}

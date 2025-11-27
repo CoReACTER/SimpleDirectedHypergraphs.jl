@@ -10,7 +10,7 @@ using Random
 using LinearAlgebra
 using SimpleTraits
 using InvertedIndices
-using JuMP
+using JuMP: constraint, is_binary, Min, Model, objective, optimize!, set_start_value, value, variable
 import GLPK
 
 export AbstractDirectedHypergraph
@@ -23,7 +23,7 @@ export to_undirected
 
 export get_weakly_connected_components, get_strongly_connected_components
 
-export DiHyperPathState, initialize_dihyperpath_state, forward_reachable, backward_traceable, is_reachable
+export forward_reachable, backward_traceable, is_reachable, get_hyperpath
 export all_hyperpaths, shortest_hyperpath_kk_heuristic, initialize_ilp_model, shortest_hyperpath_kk_ilp
 
 export SnodeDistanceKKHeuristic, SnodeDistanceKKILP
