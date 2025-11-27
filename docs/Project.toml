@@ -1,5 +1,8 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
-SimpleHypergraphs = "aa4a32ff-dd5d-5357-90e3-e7a9512f0501"
 SimpleDirectedHypergraphs = "a42c6b43-640c-4761-b4a8-4f98c31d02e9"
+SimpleHypergraphs = "aa4a32ff-dd5d-5357-90e3-e7a9512f0501"
+
+[sources]
+SimpleDirectedHypergraphs = {path = ".."}

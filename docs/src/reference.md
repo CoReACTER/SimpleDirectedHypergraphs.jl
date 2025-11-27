@@ -128,20 +128,11 @@ forward_reachable(::H, ::Int) where {H<:AbstractDirectedHypergraph}
 backward_traceable(::H, ::Int) where {H<:AbstractDirectedHypergraph}
 is_reachable(::H, ::Int, ::Int, ::Symbol) where {H<:AbstractDirectedHypergraph}
 
-all_hyperpaths(::H, ::Int, ::Int) where {H <: AbstractDirectedHypergraph}
-all_hyperpaths(::DirectedHypergraph{T,V,E,D}, ::Int, ::Set{Int}) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
-all_hyperpaths(::DirectedHypergraph{T,V,E,D}, ::Set{Int}, ::Int) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
-all_hyperpaths(::DirectedHypergraph{T,V,E,D}, ::Set{Int}, ::Set{Int}) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
+all_hyperpaths
 
-shortest_hyperpath_kk_heuristic(::H, ::Int, ::Int, ::AbstractVector{T}) where {H <: AbstractDirectedHypergraph, T <: Real}
-shortest_hyperpath_kk_heuristic(::DirectedHypergraph{T, V, E, D}, ::Int, ::Set{Int}, hyperedge_weights::AbstractVector{T}) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
-shortest_hyperpath_kk_heuristic(::DirectedHypergraph{T, V, E, D}, ::Set{Int}, ::Int, ::AbstractVector{T}) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
-shortest_hyperpath_kk_heuristic(::DirectedHypergraph{T, V, E, D}, ::Set{Int}, ::Set{Int}, ::AbstractVector{T}) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
+shortest_hyperpath_kk_heuristic
 
-shortest_hyperpath_kk_ilp(::H, ::Int, ::Int, ::AbstractVector{T}) where {H<:AbstractDirectedHypergraph, T<:Real}
-shortest_hyperpath_kk_ilp(::DirectedHypergraph{T,V,E,D}, ::Int, ::Set{Int}, ::AbstractVector{S}) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
-shortest_hyperpath_kk_ilp(::DirectedHypergraph{T,V,E,D}, ::Set{Int}, ::Int, ::AbstractVector{S}) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
-shortest_hyperpath_kk_ilp(::DirectedHypergraph{T,V,E,D}, ::Set{Int}, ::Set{Int}, ::AbstractVector{S}) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
+shortest_hyperpath_kk_ilp
 
 SnodeDistanceKKHeuristic
 SnodeDistanceKKILP
