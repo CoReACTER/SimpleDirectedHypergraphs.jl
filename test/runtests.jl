@@ -577,6 +577,7 @@ end;
     @test length(all_hyperpaths(dh3, Set{Int}([1,8]), 9)) == 5
     @test length(all_hyperpaths(dh3, Set{Int}([2,6]), Set{Int}([8,9]))) == 2
 
+    # Test exact (integer linear programming) shortest-path algorithm
     model = initialize_ilp_model(dh3, 1, 9, w3)
     @test JuMP.num_constraints(model[1], JuMP.VariableRef, JuMP.MOI.ZeroOne) == 11
     @test JuMP.num_constraints(model[1], JuMP.AffExpr, JuMP.MOI.GreaterThan{Float64}) == 20
@@ -589,8 +590,16 @@ end;
     @test shortest_hyperpath_kk_ilp(dh3, 1, Set{Int}([7,9]), w3) == Set{Int}([1,7,10])
     @test shortest_hyperpath_kk_ilp(dh3, Set{Int}([2,6]), 9, w3) == Set{Int}(5)
     @test shortest_hyperpath_kk_ilp(dh3, Set{Int}([4,6]), Set{Int}([8,9]), w3) == Set{Int}([9,11])
+
+    # Test distance
+    @test SimpleHypergraphs.distance(dh3, SnodeDistanceKKHeuristic(Set{Int}(1), Set{Int}(9)), w3) == 3
+    @test SimpleHypergraphs.distance(dh3, SnodeDistanceKKILP(Set{Int}(1), Set{Int}([7,9])), w3) == 4
 end
 
 @testset "SimpleDirectedHypergraphs diameter               " begin
+    @test Graphs.diameter(dh1, SnodeDistanceKKHeuristic(Set{Int}(), Set{Int}())) == Inf64
+    @test Graphs.diameter(dh2, SnodeDistanceKKHeuristic(Set{Int}(), Set{Int}())) == 3
 
+    @test Graphs.diameter(dh1, SnodeDistanceKKILP(Set{Int}(), Set{Int}())) == Inf64
+    @test Graphs.diameter(dh2, SnodeDistanceKKILP(Set{Int}(), Set{Int}())) == 3
 end;

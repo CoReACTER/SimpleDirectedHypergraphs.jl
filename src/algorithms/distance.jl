@@ -127,17 +127,23 @@ function Graphs.diameter(
     end
 
     # Since we're interested in the number of steps, assign each hyperedge a uniform weight of `1`
-    edge_weights = ones(Int, nhe(hg))
+    edge_weights = ones(nhe(hg))
 
-    max_dist = 0
+    max_dist = 0.0
     for i in 1:nhv(hg)
         for j in i+1:nhv(hg)
-            dist = distance(hg, SnodeDistanceKKHeuristic(Set{Int}(i), Set{Int}(j)), edge_weights)
+            dist = SimpleHypergraphs.distance(
+                hg,
+                SnodeDistanceKKHeuristic(Set{Int}(i), Set{Int}(j)),
+                edge_weights
+            )
             if dist > max_dist
                 max_dist = dist
             end
         end
     end
+
+    return max_dist
 end
 
 """
@@ -160,15 +166,21 @@ function Graphs.diameter(
     end
 
     # Since we're interested in the number of steps, assign each hyperedge a uniform weight of `1`
-    edge_weights = ones(Int64, nhe(hg))
+    edge_weights = ones(nhe(hg))
 
     max_dist = 0
     for i in 1:nhv(hg)
         for j in i+1:nhv(hg)
-            dist = distance(hg, SnodeDistanceKKILP(Set{Int}(i), Set{Int}(j)), edge_weights)
+            dist = SimpleHypergraphs.distance(
+                hg,
+                SnodeDistanceKKILP(Set{Int}(i), Set{Int}(j)),
+                edge_weights
+            )
             if dist > max_dist
                 max_dist = dist
             end
         end
     end
+
+    return max_dist
 end
