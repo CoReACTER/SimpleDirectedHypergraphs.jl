@@ -147,8 +147,8 @@ shortest_hyperpath_kk_ilp(::DirectedHypergraph{T,V,E,D}, ::Set{Int}, ::Set{Int},
 SnodeDistanceKKHeuristic
 SnodeDistanceKKILP
 
-SimpleHypergraphs.distance(::H, ::SnodeDistanceKKHeuristic, ::AbstractVector{T}) where {H<:AbstractDirectedHypergraph,T<:Real}
-distance(::H, ::SnodeDistanceKKILP, ::AbstractVector{T}) where {H <: AbstractDirectedHypergraph}
+SimpleHypergraphs.distance(::H, ::SnodeDistanceKKHeuristic, ::AbstractVector{T}) where {H<:AbstractDirectedHypergraph, T<:Real}
+SimpleHypergraphs.distance(::H, ::SnodeDistanceKKILP, ::AbstractVector{T}) where {H<:AbstractDirectedHypergraph, T<:Real}
 
 Graphs.diameter(::H, ::SnodeDistanceKKHeuristic) where {H<:AbstractDirectedHypergraph}
 Graphs.diameter(::H, ::SnodeDistanceKKILP) where {H<:AbstractDirectedHypergraph}
