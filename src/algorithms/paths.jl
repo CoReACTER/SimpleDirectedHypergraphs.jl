@@ -650,11 +650,11 @@ function initialize_ilp_model(
             end
 
             in_hes = collect(keys(hg.hg_head.v2he[v]))
-            @constraint(model, con_scalar, sum([x[ih] for ih in in_hes]) >= x[i])
+            @constraint(model, sum([x[ih] for ih in in_hes]) >= x[i])
         end
 
         # Head-hitting inequalities
-        if target ∉ hg.hg_head.he2v[i]
+        if target ∉ keys(hg.hg_head.he2v[i])
             hits = Int[]
             for j in 1:nhe(hg)
                 if i != j && length(intersect(Set(keys(hg.hg_head.he2v[i])), Set(keys(hg.hg_tail.he2v[j])))) >= 1
@@ -662,20 +662,21 @@ function initialize_ilp_model(
                 end
             end
 
-            @constraint(model, con_scalar, sum([x[j] for j in hits]) >= x[i])
+            @constraint(model, sum([x[j] for j in hits]) >= x[i])
         end
     end
 
     # Target-production inequality
-    @constraint(model, con_scalar, sum([x[e] for e in keys(hg.hg_head.v2he[target])]) >= 1)
+    @constraint(model, sum([x[e] for e in keys(hg.hg_head.v2he[target])]) >= 1)
 
     # Distance-based inequalities
     dist_ests = fill(typemax(T), nhv(hg))
     for v in forward_reachable(hg, source)[1]
         # TODO: this is inefficient
         # Currently, will repeat a lot of work
+        # TODO: you are here; don't yet even understand what the problem is...
         dist_ests[v] = sum(
-            hyperedge_weights[e] for e in shortest_hyperpath_kk_heuristic(hg, source, v, hyperedge_weights)
+            [hyperedge_weights[e] for e in shortest_hyperpath_kk_heuristic(hg, source, v, hyperedge_weights)]
         )
     end
 
@@ -700,7 +701,7 @@ function initialize_ilp_model(
         ]
         push!(crosses, BitVector(cross))
 
-        @constraint(model, con_scalar, dot(x, cross) >= 1)
+        @constraint(model, dot(x, cross) >= 1)
     end
 
     # Define objective function
@@ -770,7 +771,7 @@ function shortest_hyperpath_kk_ilp(
     while length(new_cuts) > 0
         # Add new constraints to the model
         for cross in new_crosses
-            @constraint(model, con_scalar, dot(x, cross) >= 1)
+            @constraint(model, dot(x, cross) >= 1)
         end
 
         # Re-optimize model with new cut-constraints
@@ -784,11 +785,11 @@ function shortest_hyperpath_kk_ilp(
 end
 
 function shortest_hyperpath_kk_ilp(
-    hg::H,
+    hg::DirectedHypergraph{T,V,E,D},
     source::Int,
     targets::Set{Int},
-    hyperedge_weights::Vector{T}
-) where {H<:AbstractDirectedHypergraph,T<:Real}
+    hyperedge_weights::Vector{S}
+) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -804,7 +805,7 @@ function shortest_hyperpath_kk_ilp(
         hg_copy,
         source,
         metatarget,
-        hyperedge_weights
+        vcat(hyperedge_weights, convert(S, 0))
     )
 
     # Remove the fictitious hyperedge from the targets to the metatarget
@@ -812,11 +813,11 @@ function shortest_hyperpath_kk_ilp(
 end
 
 function shortest_hyperpath_kk_ilp(
-    hg::H,
+    hg::DirectedHypergraph{T,V,E,D},
     sources::Set{Int},
     target::Int,
-    hyperedge_weights::Vector{T}
-) where {H<:AbstractDirectedHypergraph,T<:Real}
+    hyperedge_weights::Vector{S}
+) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -832,7 +833,7 @@ function shortest_hyperpath_kk_ilp(
         hg_copy,
         metasource,
         target,
-        vcat(hyperedge_weights, convert(T, 0))
+        vcat(hyperedge_weights, convert(S, 0))
     )
 
     # Remove the fictitious hyperedge from the metasource to the sources
@@ -840,11 +841,11 @@ function shortest_hyperpath_kk_ilp(
 end
 
 function shortest_hyperpath_kk_ilp(
-    hg::H,
+    hg::DirectedHypergraph{T,V,E,D},
     sources::Set{Int},
     targets::Set{Int},
-    hyperedge_weights::Vector{T}
-) where {H<:AbstractDirectedHypergraph,T<:Real}
+    hyperedge_weights::Vector{S}
+) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -936,6 +937,8 @@ function expand_cuts(
                     # Greedily pick the vertex in the tail of `e` that causes the fewest hyperedges to newly cross this cut
                     new_cut_ev = Dict{Int,Set{Int}}()
                     new_cross_ev = Dict{Int,Vector{Bool}}()
+                    greedy_v = 0
+                    min_length = typemax(Int)
                     for v in keys(hg.hg_tail.he2v[e])
                         new_cut_ev[v] = setdiff(new_cut, Set(v))
                         new_cross_ev[v] = [
@@ -943,9 +946,12 @@ function expand_cuts(
                             !issubset(Set(keys(hg.hg_head.he2v[i])), new_cut_ev[v])
                             for i in 1:nhe(hg)
                         ]
+                        v_length = length(findall(map(!, old_cross) .&& new_cross_ev[v]))
+                        if v_length < min_length
+                            min_length = v_length
+                            greedy_v = v
+                        end
                     end
-
-                    greedy_v = minimum(q -> length(findall(!old_cross .&& new_cross_ev[q])), keys(new_cross_ev))
 
                     new_cut = new_cut_ev[greedy_v]
                     new_cross = new_cross_ev[greedy_v]
@@ -954,7 +960,7 @@ function expand_cuts(
         end
 
         # If this is still a valid s,t-cut
-        if !any(new_corss) && source ∈ new_cut
+        if !any(new_cross) && source ∈ new_cut
             push!(new_cuts, new_cut)
             push!(new_crosses, new_cross)
         end

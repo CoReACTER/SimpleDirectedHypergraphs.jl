@@ -4,6 +4,7 @@ using StatsBase
 using Random
 using DataStructures
 using Graphs
+import JuMP
 using Test
 # using JET
 
@@ -568,13 +569,27 @@ end;
 
     # Test heuristic (but usually accurate) shortest-path algorithm
     @test shortest_hyperpath_kk_heuristic(dh3, 1, 9, w3) == Set{Int}([1, 6, 11])
+    @test_throws AssertionError shortest_hyperpath_kk_heuristic(dh3, 9, 1, w2)
 
     # Test generation of all possible paths
     @test length(all_hyperpaths(dh3, 1, 9)) == 6
-    @test length(all_hyperpaths(dh3, 1, Set{Int}([8, 9]))) == 9
-    @test length(all_hyperpaths(dh3, Set{Int}([1,8]), 9)) == 1
+    @test length(all_hyperpaths(dh3, 1, Set{Int}([8, 9]))) == 7
+    @test length(all_hyperpaths(dh3, Set{Int}([1,8]), 9)) == 5
     @test length(all_hyperpaths(dh3, Set{Int}([2,6]), Set{Int}([8,9]))) == 2
-end;
+
+    model = initialize_ilp_model(dh3, 1, 9, w3)
+    @test JuMP.num_constraints(model[1], JuMP.VariableRef, JuMP.MOI.ZeroOne) == 11
+    @test JuMP.num_constraints(model[1], JuMP.AffExpr, JuMP.MOI.GreaterThan{Float64}) == 20
+    @test JuMP.solver_name(model[1]) == "GLPK"
+    @test JuMP.objective_sense(model[1]) == JuMP.MIN_SENSE
+    @test JuMP.num_variables(model[1]) == 11
+    @test_throws AssertionError initialize_ilp_model(dh3, 9, 1, w3)
+
+    @test shortest_hyperpath_kk_ilp(dh3, 1, 9, w3) == Set{Int}([1,6,11])
+    @test shortest_hyperpath_kk_ilp(dh3, 1, Set{Int}([7,9]), w3) == Set{Int}([1,7,10])
+    @test shortest_hyperpath_kk_ilp(dh3, Set{Int}([2,6]), 9, w3) == Set{Int}(5)
+    @test shortest_hyperpath_kk_ilp(dh3, Set{Int}([4,6]), Set{Int}([8,9]), w3) == Set{Int}([9,11])
+end
 
 @testset "SimpleDirectedHypergraphs diameter               " begin
 
