@@ -3,6 +3,7 @@ module SimpleDirectedHypergraphs
 using SimpleHypergraphs
 using Graphs
 using StatsBase
+using Statistics
 using DataStructures
 # using PyPlot
 using JSON3
@@ -39,5 +40,6 @@ include("models/dual.jl")
 
 include("algorithms/paths.jl")
 include("algorithms/distance.jl")
+include("algorithms/clustering.jl")
 
 end # module

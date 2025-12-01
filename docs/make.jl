@@ -8,7 +8,7 @@ makedocs(;
     authors="Evan Walter Clark Spotte-Smith",
     sitename="SimpleDirectedHypergraphs.jl",
     format=Documenter.HTML(;
-        canonical="https://CoReACTER.org/SimpleDirectedHypergraphs.jl",
+        canonical="https://coreacter.codeberg.page/SimpleDirectedHypergraphs.jl/@main",
         edit_link="main",
         assets=String[],
     ),
@@ -19,6 +19,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/CoReACTER/SimpleDirectedHypergraphs.jl",
+    repo="codeberg.org/CoReACTER/SimpleDirectedHypergraphs.jl",
     devbranch="main",
 )
