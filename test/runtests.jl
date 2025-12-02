@@ -602,4 +602,8 @@ end
 
     @test Graphs.diameter(dh1, SnodeDistanceKKILP(Set{Int}(), Set{Int}())) == Inf64
     @test Graphs.diameter(dh2, SnodeDistanceKKILP(Set{Int}(), Set{Int}())) == 3
+end
+
+@testset "SimpleDirectedHypergraphs clustering             " begin
+    # TODO: this
 end;
