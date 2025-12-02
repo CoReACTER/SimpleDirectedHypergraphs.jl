@@ -26,10 +26,14 @@ function _num_quads(hg::H, i::Int) where {H <: AbstractDirectedHypergraph}
     quads
 end
 
-function _max_num_quads(hg::H, i::Int) where {H <: AbstractDirectedHypergraph}
+function _max_num_quads(
+    hg::H,
+    i::Int,
+    tail_deg_exc::AbstractVector{Int},
+    head_deg_exc::AbstractVector{Int}
+) where {H <: AbstractDirectedHypergraph}
     ne = nhe(hg)
-    tail_degrees = length.(hg.hg_tail.he2v)
-    head_degrees = length.(hg.hg_head.he2v)
+
     # TODO: there must be a better implementation
     qmax = 0
     for α in 1:ne
@@ -40,45 +44,58 @@ function _max_num_quads(hg::H, i::Int) where {H <: AbstractDirectedHypergraph}
                 continue
             end
 
-            if tail_degrees[α] == tail_degrees[β] && head_degrees[α] == head_degrees[β]
-                W = 4 * (min(tail_degrees[α], head_degrees[α]) - 1)
-            elseif tail_degrees[α] == tail_degrees[β] || head_degrees[α] == head_degrees[β]
-                degs = [tail_degrees[α], tail_degrees[β], head_degrees[β]]
+            if tail_deg_exc[α] == head_deg_exc[α] && tail_deg_exc[β] == head_deg_exc[β]
+                W = 4 * min(tail_deg_exc[α], tail_deg_exc[β])
+            elseif tail_deg_exc[α] == head_deg_exc[α] && tail_deg_exc[β] != head_deg_exc[β]
+                degs = [tail_deg_exc[α], tail_deg_exc[β], head_deg_exc[β]]
                 min_deg = minimum(degs)
                 max_deg = maximum(degs)
                 med_deg = Statistics.median(degs)
 
-                if min_deg == tail_degrees[α]
-                    W = 4 * (min_deg - 1)
-                elseif min_deg != tail_degrees[α] && length(Set(degs)) == 3
-                    W = 2 * (min_deg - 1) + 2 * (med_deg - 1)
+                if min_deg == tail_deg_exc[α]
+                    W = 4 * min_deg
+                elseif length(Set(degs)) == 3
+                    W = 2 * min_deg + 2 * med_deg
                 else
-                    W = 2 * (min_deg - 1) + 2 * (max_deg - 1)
+                    W = 2 * min_deg + 2 * max_deg
                 end
-            elseif length(Set([tail_degrees[α], tail_degrees[β], head_degrees[α], head_degrees[β]])) != 4
-                degs = [tail_degrees[α], tail_degrees[β], head_degrees[α], head_degrees[β]]
+            elseif tail_deg_exc[α] != head_deg_exc[α] && tail_deg_exc[β] == head_deg_exc[β]
+                degs = [tail_deg_exc[α], head_deg_exc[α], tail_deg_exc[β]]
+                min_deg = minimum(degs)
+                max_deg = maximum(degs)
+                med_deg = Statistics.median(degs)
+
+                if min_deg == tail_deg_exc[β]
+                    W = 4 * min_deg
+                elseif length(Set(degs)) == 3
+                    W = 2 * min_deg + 2 * med_deg
+                else
+                    W = 2 * min_deg + 2 * max_deg
+                end
+            elseif length(Set([tail_deg_exc[α], tail_deg_exc[β], head_deg_exc[α], head_deg_exc[β]])) != 4
+                degs = [tail_deg_exc[α], tail_deg_exc[β], head_deg_exc[α], head_deg_exc[β]]
                 setdeg = Set(degs)
                 min_deg = minimum(degs)
                 max_deg = maximum(degs)
                 med_deg = Statistics.median(setdeg)
 
                 if length(setdeg) == 2
-                    W = 3 * (min_deg - 1) + (max_deg - 1)
+                    W = 3 * min_deg + max_deg
                 elseif min(degs[1], degs[3]) == min(degs[2], degs[4])
-                    W = 3 * (min_deg - 1) + (med_deg - 1)
+                    W = 3 * min_deg + med_deg
                 elseif max(degs[1], degs[3]) == min(degs[2], degs[4]) || min(degs[1], degs[3]) == max(degs[2], degs[4])
-                    W = 2 * (min_deg - 1) + 2 * (med_deg - 1)
+                    W = 2 * min_deg + 2 * med_deg
                 else
-                    W = 2 * (min_deg - 1) + (med_deg - 1) + (max_deg - 1)
+                    W = 2 * min_deg + med_deg + max_deg
                 end
             else
-                degs = [tail_degrees[α], tail_degrees[β], head_degrees[α], head_degrees[β]]
+                degs = [tail_deg_exc[α], tail_deg_exc[β], head_deg_exc[α], head_deg_exc[β]]
                 degs_sorted = sort(degs)
 
                 if max(degs[1], degs[3]) < min(degs[2], degs[4]) || min(degs[1], degs[3]) > max(degs[2], degs[4])
-                    W = 2 * (degs_sorted[1] - 1) +  2 * (degs_sorted[2] - 1)
+                    W = 2 * degs_sorted[1] +  2 * degs_sorted[2]
                 else
-                    W =  2 * (degs_sorted[1] - 1) + (degs_sorted[2] - 1) + (degs_sorted[3] - 1)
+                    W =  2 * degs_sorted[1] + degs_sorted[2] + degs_sorted[3]
                 end
             end
             qmax += inc_ab * W
@@ -88,13 +105,42 @@ function _max_num_quads(hg::H, i::Int) where {H <: AbstractDirectedHypergraph}
 end
 
 """
+    SimpleHypergraphs.quad_clustering_coefficient(hg::H, i::Int) where {H <: AbstractDirectedHypergraph} 
 
+    SimpleHypergraphs.quad_clustering_coefficient(hg::H) where {H <: AbstractDirectedHypergraph}
+
+    Implements the "quad clustering coefficient" (QCC) for directed hypergraphs, as described in:
+    Ha, Neri, and Annibale, Chaos 34, 043102 (2024), DOI: 10.1063/5.0188246
+
+    A *quad* is the shortest simple cycle in a hypergraph, consisting of two vertices `i` and `j` that are both
+    incident on the same two hyperedges `α` and `β`. The QCC is a density, describing the fraction of all possible
+    "quads" a particular vertex `i` participates in. It is always true that `0 <= QCC(hg, i) <= 1`.
 """
 function SimpleHypergraphs.quad_clustering_coefficient(hg::H, i::Int) where {H <: AbstractDirectedHypergraph}
+    # Degrees of hyperedge tails and heads, not including vertex `i`
+    tail_deg_exc = zeros(Int, nhe(hg))
+    head_deg_exc = zeros(Int, nhe(hg))
+    for he in 1:nhe(hg)
+        tail_deg_exc[he] = length([k for k in keys(hg.hg_tail.he2v[he]) if k != i])
+        tail_deg_exc[he] = length([k for k in keys(hg.hg_head.he2v[he]) if k != i])
+    end
+    
+    # Can this vertex participate in any quads, based on its connectivity?
+    degree_thresh = 0
+    for he in union(Set(keys(hg.hg_tail.v2he[i])), Set(keys(hg.hg_head.v2he[i])))
+        degree_thresh += tail_deg_exc[he] + head_deg_exc[he]
+    end
+    
+    if degree_thresh < 2
+        return 0.0
+    end
+
+    q = _num_quads(hg, i)
+    qmax = _max_num_quads(hg, i, tail_deg_exc, head_deg_exc)
+
+    return q / qmax
 end
 
-"""
-
-"""
 function SimpleHypergraphs.quad_clustering_coefficient(hg::H) where {H <: AbstractDirectedHypergraph}
+    return [SimpleHypergraphs.quad_clustering_coefficient(hg, i) for i in 1:nhv(hg)]
 end
