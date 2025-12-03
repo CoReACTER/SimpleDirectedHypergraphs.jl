@@ -19,10 +19,11 @@ makedocs(;
     pages=[
         "Home" => "index.md",
     ],
-    checkdocs=:exports
+    checkdocs=:exports,
+    repo="https://codeberg.org/CoReACTER/SimpleDirectedHypergraphs.jl"
 )
 
 deploydocs(;
-    repo="codeberg.org/CoReACTER/SimpleDirectedHypergraphs.jl",
+    repo="https://codeberg.org/CoReACTER/SimpleDirectedHypergraphs.jl",
     devbranch="main",
 )
