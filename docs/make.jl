@@ -1,7 +1,10 @@
 using SimpleDirectedHypergraphs
 using Documenter
 
+
 DocMeta.setdocmeta!(SimpleDirectedHypergraphs, :DocTestSetup, :(using SimpleDirectedHypergraphs); recursive=true)
+
+doctest(SimpleDirectedHypergraphs)
 
 makedocs(;
     modules=[SimpleDirectedHypergraphs],

@@ -22,6 +22,5 @@ steps:
       - apt-get -y update
       - apt-get -y install python3-matplotlib openssh-server
       - julia --project=docs/ -e "import Pkg; Pkg.instantiate(); Pkg.add(name="OpenSSL_jll", version="3.0")"
-      - julia --project=docs/ -e "using OpenSSL_jll; using Documenter: DocMeta, doctest; using SimpleDirectedHypergraphs; DocMeta.setdocmeta!(SimpleDirectedHypergraphs, :DocTestSetup, :(using SimpleDirectedHypergraphs); recursive=true); doctest(SimpleDirectedHypergraphs)"
       - julia --project=docs/ docs/make.jl
   secrets: [ ssh_key ]
