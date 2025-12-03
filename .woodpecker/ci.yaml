@@ -2,7 +2,7 @@ labels:
   platform: linux/amd64
 
 steps:
-  - test:
+  - name: test
     when:
       - event: push
         branch: main
@@ -13,7 +13,7 @@ steps:
       - apt-get -y update
       - apt-get -y install python3-matplotlib
       - julia --project=. -e "import Pkg; Pkg.instantiate(); Pkg.test()"
-  - docs:
+  - name: docs
     when:
       event: push
       branch: main
