@@ -21,7 +21,7 @@ steps:
     commands:
       - apt-get -y update
       - apt-get -y install python3-matplotlib libpython3-dev python3-dev openssh-server
-      - julia --project=docs/ -e "import Pkg; Pkg.instantiate(); Pkg.add(name="OpenSSL_jll", version="3.0")"
+      - julia --project=docs/ -e "import Pkg; Pkg.instantiate()"
       - julia --project=docs/ docs/make.jl
     environment: 
       PROJECT_ACCESS_TOKEN:
