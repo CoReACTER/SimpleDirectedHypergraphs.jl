@@ -8,7 +8,7 @@ doctest(SimpleDirectedHypergraphs)
 
 makedocs(;
     modules=[SimpleDirectedHypergraphs],
-    authors="Evan Walter Clark Spotte-Smith",
+    authors="Evan Walter Clark Spotte-Smith, CoReACTER",
     sitename="SimpleDirectedHypergraphs.jl",
     format=Documenter.HTML(;
         canonical="https://coreacter.codeberg.page/SimpleDirectedHypergraphs.jl/@main",
