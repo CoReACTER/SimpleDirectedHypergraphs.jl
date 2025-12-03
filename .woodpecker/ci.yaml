@@ -11,7 +11,7 @@ steps:
     image: julia
     commands:
       - apt-get -y update
-      - apt-get -y install python3-matplotlib
+      - apt-get -y install python3-matplotlib libpython3-dev python3-dev
       - julia --project=. -e "import Pkg; Pkg.instantiate(); Pkg.test()"
   - name: docs
     when:
@@ -20,7 +20,7 @@ steps:
     image: julia
     commands:
       - apt-get -y update
-      - apt-get -y install python3-matplotlib openssh-server
+      - apt-get -y install python3-matplotlib libpython3-dev python3-dev openssh-server
       - julia --project=docs/ -e "import Pkg; Pkg.instantiate(); Pkg.add(name="OpenSSL_jll", version="3.0")"
       - julia --project=docs/ docs/make.jl
     environment: 
