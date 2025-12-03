@@ -605,5 +605,40 @@ end
 end
 
 @testset "SimpleDirectedHypergraphs clustering             " begin
-    # TODO: this
+    c1_tail = [
+        true nothing nothing
+        nothing true nothing
+        nothing nothing true
+        nothing nothing true
+        nothing nothing nothing
+    ]
+    c1_head = [
+        nothing nothing nothing
+        true nothing nothing
+        nothing true nothing
+        nothing true nothing
+        nothing nothing true
+    ]
+    hg1 = DirectedHypergraph(c1_tail, c1_head)
+    @test quad_clustering_coefficient(hg1) == [0.0, 0.0, 0.25, 0.25, 0.0]
+    @test quad_clustering_coefficient(hg1, 1) == 0.0
+
+    c2_tail = [
+        true true
+        nothing nothing
+    ]
+    c2_head = [
+        nothing nothing
+        true true
+    ]
+    hg2 = DirectedHypergraph(c2_tail, c2_head)
+    @test quad_clustering_coefficient(hg2) == ones(2)
+    @test quad_clustering_coefficient(hg2, 2) == 1.0
+    
+    qdh2 = quad_clustering_coefficient(dh2)
+    @test isapprox(qdh2[1], 0.5)
+    @test isapprox(qdh2[2], 0.15384615384615385)
+    @test isapprox(qdh2[3], 0.15384615384615385)
+    @test isapprox(qdh2[4], 0.15384615384615385)
+    @test isapprox(qdh2[5], 0.16666666666666666)
 end;
