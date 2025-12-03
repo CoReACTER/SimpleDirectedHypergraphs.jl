@@ -2,7 +2,6 @@
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://coreacter.codeberg.page/SimpleDirectedHypergraphs.jl/@main)
 [![Build Status](https://ci.codeberg.org/api/badges/15645/status.svg)](https://ci.codeberg.org/repos/15645)
-[![Coverage](https://codecov.io/gh/CoReACTER/SimpleDirectedHypergraphs.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/CoReACTER/SimpleDirectedHypergraphs.jl)
 
 `SimpleDirectedHypergraphs.jl` is a Julia package for directed hypergraph data structures. It builds off of [SimpleHypergraphs.jl](https://github.com/pszufe/SimpleHypergraphs.jl), which in turn implements the [Graphs.jl interface](https://juliagraphs.org/Graphs.jl/stable/core_functions/interface/).
 
