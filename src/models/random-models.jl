@@ -1,9 +1,3 @@
-# TODO:
-# - Erdős–Rényi–Gilbert model for (directed) hypergraphs?
-# - Random preferential model for directed hypergraphs
-#     - I think some new math might need to be done here
-
-
 """
     random_model(nVertices::Int, nEdges::Int, HType::Type{H}) where {H<:AbstractDirectedHypergraph}
 
@@ -165,6 +159,21 @@ function SimpleHypergraphs.random_dregular_model(
     HType(mx_tail, mx_head)
 end
 
+function random_crn_model(
+    nVertices::Int,
+    nEdges::Int,
+    maxTailSize::Int,
+    maxHeadSize::Int,
+    HType::Type{H};
+    ensure_thermodynamic_weights::Bool=false
+)
+
+
+end
+
 # TODO: preferential attachment
 # TODO: hypercurveball algorithm
-# YOU ARE HERE
+# TODO:
+# - Erdős–Rényi–Gilbert model for (directed) hypergraphs?
+# - Random preferential model for directed hypergraphs
+#     - I think some new math might need to be done here
