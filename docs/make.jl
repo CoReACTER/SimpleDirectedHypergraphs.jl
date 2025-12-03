@@ -1,14 +1,17 @@
 using SimpleDirectedHypergraphs
 using Documenter
 
+
 DocMeta.setdocmeta!(SimpleDirectedHypergraphs, :DocTestSetup, :(using SimpleDirectedHypergraphs); recursive=true)
+
+doctest(SimpleDirectedHypergraphs)
 
 makedocs(;
     modules=[SimpleDirectedHypergraphs],
-    authors="Evan Walter Clark Spotte-Smith",
+    authors="Evan Walter Clark Spotte-Smith, CoReACTER",
     sitename="SimpleDirectedHypergraphs.jl",
     format=Documenter.HTML(;
-        canonical="https://CoReACTER.org/SimpleDirectedHypergraphs.jl",
+        canonical="https://coreacter.codeberg.page/SimpleDirectedHypergraphs.jl/@main",
         edit_link="main",
         assets=String[],
     ),
@@ -19,6 +22,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/CoReACTER/SimpleDirectedHypergraphs.jl",
+    repo="codeberg.org/CoReACTER/SimpleDirectedHypergraphs.jl",
     devbranch="main",
 )
