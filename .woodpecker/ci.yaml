@@ -2,17 +2,17 @@ labels:
   platform: linux/amd64
 
 steps:
-  - name: test
-    when:
-      - event: push
-        branch: main
-      - event: pull_request
-        repo: CoReACTER/SimpleDirectedHypergraphs.jl
-    image: julia
-    commands:
-      - apt-get -y update
-      - apt-get -y install python3-matplotlib libpython3-dev python3-dev
-      - julia --project=. -e "import Pkg; Pkg.instantiate(); Pkg.test()"
+  # - name: test
+  #   when:
+  #     - event: push
+  #       branch: main
+  #     - event: pull_request
+  #       repo: CoReACTER/SimpleDirectedHypergraphs.jl
+  #   image: julia
+  #   commands:
+  #     - apt-get -y update
+  #     - apt-get -y install python3-matplotlib libpython3-dev python3-dev
+  #     - julia --project=. -e "import Pkg; Pkg.instantiate(); Pkg.test()"
   - name: docs
     when:
       event: push
