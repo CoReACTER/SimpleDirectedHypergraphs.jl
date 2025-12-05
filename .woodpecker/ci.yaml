@@ -26,3 +26,5 @@ steps:
     environment: 
       PROJECT_ACCESS_TOKEN:
         from_secret: project_access_token
+      DOCUMENTER_KEY:
+        from_secret: DOCUMENTER_KEY
