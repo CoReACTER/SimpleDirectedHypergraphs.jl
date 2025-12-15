@@ -161,12 +161,65 @@ end
 
 function random_crn_model(
     nVertices::Int,
-    nEdges::Int,
-    maxTailSize::Int,
-    maxHeadSize::Int,
-    HType::Type{H};
-    ensure_thermodynamic_weights::Bool=false
+    nEdges::Int;
+    nTrials::Int=10,
+    minTailSize::Int=0,
+    maxTailSize::Int=nVertices,
+    minHeadSize::Int=0,
+    maxHeadSize::Int=nVertices,
+    allow_catalysts::Bool=true,
+    ensure_connected::Symbol=:none,
 )
+    # Algorithm either does not check for connectivity (:none), checks for weak connectivity (:weak), or checks for
+    # strong connectivity (:strong)
+    @assert ensure_connected ∈ [:none, :weak, :strong]
+    
+    # If hyperedge generation cannot be attempted, algorithm is futile
+    @assert nTrials >= 1
+
+    # Directed hypergraph with `Hij = (t, h)`, where `t` and `h` are the multiplicities of vertex/species `i` in the
+    # tail and head of hyperedge/reaction `j`, respectively.
+    H = DirectedHypergraph{Int}(nVertices, nEdges)
+
+    # Uniformly select `nEdges` directed hyperedges `e` obeying:
+    # - `minTailSize ≤ |tail(e)| ≤ maxTailSize`
+    # - `minHeadSize ≤ |head(e)| ≤ maxHeadSize`
+    # - (if `!allow_catalysts`) `tail(e) ∩ head(e) = ∅`
+    # - Let `mnet = {m_head(e, i) - m_tail(e, i) | 1 ≤ i ≤ nVertices}`, where `m_head(e, i)` is the multiplicity (i.e.,
+    #   the stoichiometric coefficient) of species/vertex `i` in the head of reaction/hyperedge `e` and `m_tail(e, i)`
+    #   is, accordingly, the multiplicity of `i` in the tail of `e`. Then,
+    #       - (if `!allow_import_export`), `∃ x1 ∈ mnet, x1 > 0 ⩓ ∃ x2 ∈ mnet, x2 < 0`
+    #       - (in general) `∃ x ∈ mnet, x ≠ 0`
+    # After `nTrials` attempts, if `nEdges` valid, unique hyperedges haven't been generated, give up and move on
+    i = 0
+    n = 0
+    while n < nEdges && i < nTrials
+        for _ in 1:(nEdges - n)
+            # Select tail size
+            
+            # Select tail vertices/species
+
+            # Partition tail multiplicities
+
+            # Select head size
+
+            # Select & partition head vertices/species, respecting restrictions above
+
+            # Check for duplication
+            valid = true
+
+            if valid
+                n += 1
+                # Add hyperedge to hypergraph
+            end
+        end
+
+        i += 1
+    end
+
+
+    # Check connectivity
+    # If possible, try to ensure connectivity while maintaining network shape (i.e., w/ exactly `nEdges` hyperedges)
 
 
 end
