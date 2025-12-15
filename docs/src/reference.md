@@ -144,6 +144,14 @@ Graphs.diameter(::H, ::SnodeDistanceKKHeuristic) where {H<:AbstractDirectedHyper
 Graphs.diameter(::H, ::SnodeDistanceKKILP) where {H<:AbstractDirectedHypergraph}
 ```
 
+Clustering
+----------
+```@docs
+
+quad_clustering_coefficient
+
+```
+
 
 I/O
 ---

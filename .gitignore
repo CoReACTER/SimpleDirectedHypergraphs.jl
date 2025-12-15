@@ -6,3 +6,4 @@ coverage.info
 /docs/Manifest.toml
 /docs/build/
 *.txt
+coverage.info
