@@ -124,8 +124,6 @@ function dhg_load(
     h = HType{T, D}(n, k)
 
     for i in 1:k
-        lastv = 0
-
         ht = split(readline(io), " || ")
         length(ht) == 2 || throw(ArgumentError("Expected one head and one tail!"))
 
@@ -138,15 +136,9 @@ function dhg_load(
             v = parse(Int, entry[1])
             w = parse(T, entry[2])
 
-            if v > lastv
-                lastv = v
-            else
-                throw(ArgumentError("Vertices in hyperedge must be sorted!"))
-            end
             h.hg_tail[v, i] = w
         end
 
-        lastv = 0
         for pos in split.(strip.(he_head))
             entry = split(pos, '=')
             length(entry) == 2 || throw(ArgumentError("Expected format: vertex=weight"))
@@ -154,11 +146,6 @@ function dhg_load(
             v = parse(Int, entry[1])
             w = parse(T, entry[2])
 
-            if v > lastv
-                lastv = v
-            else
-                throw(ArgumentError("Vertices in hyperedge must be sorted!"))
-            end
             h.hg_head[v, i] = w
         end
 

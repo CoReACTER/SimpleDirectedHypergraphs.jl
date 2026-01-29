@@ -31,6 +31,8 @@ export quad_clustering_coefficient
 
 export SnodeDistanceKKHeuristic, SnodeDistanceKKILP
 
+export random_crn_model
+
 include("abstracttypes.jl")
 include("dihypergraph.jl")
 include("io.jl")

@@ -163,19 +163,40 @@ function random_crn_model(
     nVertices::Int,
     nEdges::Int;
     nTrials::Int=10,
-    minTailSize::Int=0,
     maxTailSize::Int=nVertices,
-    minHeadSize::Int=0,
     maxHeadSize::Int=nVertices,
     allow_catalysts::Bool=true,
-    ensure_connected::Symbol=:none,
+    symmetric::Bool=true,
+    closed_system::Bool=true,
+    # ensure_connected::Symbol=:none,
+    rng::AbstractRNG=Random.default_rng()
 )
+    # No point making a random CRN with 0 vertices or 0 hyperedges
+    @assert nVertices > 0
+    @assert nEdges > 0
+
     # Algorithm either does not check for connectivity (:none), checks for weak connectivity (:weak), or checks for
     # strong connectivity (:strong)
-    @assert ensure_connected ∈ [:none, :weak, :strong]
+    # @assert ensure_connected ∈ [:none, :weak, :strong]
     
     # If hyperedge generation cannot be attempted, algorithm is futile
     @assert nTrials >= 1
+
+    # Cannot have a symmetric CRN with an odd number of reactions
+    @assert !(symmetric && isodd(nEdges))
+
+    # In symmetric case, we must restrict the tail/head size
+    # If maxTailSize != maxHeadSize initially, then there will be some hyperedges that are valid in the forwards
+    # direction but invalid in the reverse direction
+    if symmetric && (maxTailSize != maxHeadSize)
+        @warn "`maxTailSize != maxHeadSize; changing both to `min(maxTailSize, maxHeadSize)` to ensure symmetry."
+        maxSize = min(maxTailSize, maxHeadSize)
+        maxTail = maxSize
+        maxHead = maxSize
+    else
+        maxTail = maxTailSize
+        maxHead = maxHeadSize
+    end
 
     # Directed hypergraph with `Hij = (t, h)`, where `t` and `h` are the multiplicities of vertex/species `i` in the
     # tail and head of hyperedge/reaction `j`, respectively.
@@ -193,34 +214,111 @@ function random_crn_model(
     # After `nTrials` attempts, if `nEdges` valid, unique hyperedges haven't been generated, give up and move on
     i = 0
     n = 0
-    while n < nEdges && i < nTrials
-        for _ in 1:(nEdges - n)
-            # Select tail size
-            
-            # Select tail vertices/species
 
-            # Partition tail multiplicities
+    if symmetric
+        target = nEdges / 2
+    else
+        target = nEdges
+    end
+
+    # If system is closed, no reaction (hyperedge) can have an empty tail or head
+    # If the system is open, then reactions can have empty tail or empty heads
+    # We still don't allow reactions with non-empty tails and heads where the net reaction has an empty tail or head
+    # (see below)
+    if closed_system
+        minTailHead = 1
+    else
+        minTailHead = 0
+    end
+
+    chosen = Tuple{Accumulator{Int64, Int64}, Accumulator{Int64, Int64}}[]
+    
+    while n < target && i < nTrials
+        for _ in 1:(target - n)
+            # Select tail size
+            nTail = rand(rng, minTailHead:maxTail)
+
+            # Select tail vertices/species
+            thisTail = counter(rand(rng, 1:nVertices, nTail))
 
             # Select head size
+            nHead = rand(rng, minTailHead:maxHead)
 
-            # Select & partition head vertices/species, respecting restrictions above
+            # Select & partition head vertices/species
+            if allow_catalysts
+                # Select any `nHead` vertices with replacement
+                # During validation (below) we will ensure that this is not a futile reaction
+                thisHead = counter(rand(rng, 1:nVertices, nHead))
+            else
+                # If no catalysts are allowed
+                allowed_vertices = setdiff(1:nVertices, keys(thisTail))
+                thisHead = counter(rand(rng, allowed_vertices, nHead))
+            end
 
-            # Check for duplication
             valid = true
+            
+            # Check for duplication
+            if (thisTail, thisHead) ∈ chosen
+                valid = false
+            end
+
+            # Check for futility
+            if allow_catalysts
+                # If tail or head is empty, reaction is valid (must be open system)
+                if !(length(thisTail) == 0 || length(thisHead) == 0)
+                    fordiff = setdiff(thisHead, thisTail)
+                    revdiff = setdiff(thisTail, thisHead)
+
+                    # Otherwise, empty tail/head in *net* reaction is disallowed
+                    if length(fordiff) == 0 || length(revdiff) == 0
+                        valid = false
+                    end
+                end
+            else
+                # If catalysts not allowed, the only possible futile reaction is ∅ -> ∅
+                if length(thisTail) == 0 && length(thisHead) == 0
+                    valid = false
+                end
+            end
 
             if valid
                 n += 1
                 # Add hyperedge to hypergraph
+                push!(chosen, (thisTail, thisHead))
+
+                if symmetric
+                    # Add reverse hyperedge to hypergraph
+                    push!(chosen, (thisHead, thisTail))
+                end
             end
         end
 
         i += 1
     end
 
+    # Use the hyperedges generated to populate the hypergraph
+    for (i, he) in enumerate(chosen)
+        for (k, v) in he[1]
+            H[1, k, i] = v
+        end
 
-    # Check connectivity
-    # If possible, try to ensure connectivity while maintaining network shape (i.e., w/ exactly `nEdges` hyperedges)
+        for (k, v) in he[2]
+            H[2, k, i] = v
+        end
+    end
 
+    # # Check connectivity
+    # # If possible, try to ensure connectivity while maintaining network shape (i.e., w/ exactly `nEdges` hyperedges)
+    # if ensure_connected === :weak
+
+    # elseif ensure_connected === :strong
+
+    # else
+    #     # If user doesn't care about connectivity, return hypergraph directly
+    #     return H
+    # end
+
+    return H
 
 end
 

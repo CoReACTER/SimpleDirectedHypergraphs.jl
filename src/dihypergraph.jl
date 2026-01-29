@@ -703,7 +703,6 @@ function SimpleHypergraphs.remove_vertex!(h::DirectedHypergraph, v::Int)
     h
 end
 
-
 """
     add_hyperedge!(h::DirectedHypergraph{T, V, E, D};
                    vertices_tail::D = D(), vertices_head::D = D(),
