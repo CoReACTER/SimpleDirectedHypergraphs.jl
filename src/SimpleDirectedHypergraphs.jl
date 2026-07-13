@@ -27,8 +27,6 @@ export get_weakly_connected_components, get_strongly_connected_components
 export forward_reachable, backward_traceable, is_reachable
 export all_hyperpaths, shortest_hyperpath_kk_heuristic, shortest_hyperpath_kk_ilp
 
-export quad_clustering_coefficient
-
 export SnodeDistanceKKHeuristic, SnodeDistanceKKILP
 
 include("abstracttypes.jl")
