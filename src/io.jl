@@ -11,7 +11,7 @@ Saves an undirected hypergraph `h` to an output stream `io` in `ehgf` format.
 TODO: what to do about metadata?
 
 """
-function SimpleHypergraphs.hg_save(io::IO, h::H, format::EHGF_Format) where {H <: AbstractDirectedHypergraph}
+function SimpleHypergraphs.hg_save(io::IO, h::H, format::EHGF_Format; pretty::Bool = false) where {H <: AbstractDirectedHypergraph}
     
     h_size = Base.size(h)
     
@@ -56,7 +56,7 @@ The `json` in output contains the following information (keys):
 * `he_meta_head` : metadata for hyperedge heads
 
 """
-function SimpleHypergraphs.hg_save(io::IO, h::DirectedHypergraph, format::JSON_Format)
+function SimpleHypergraphs.hg_save(io::IO, h::DirectedHypergraph, format::JSON_Format; pretty::Bool = false)
     json_hg = Dict{Symbol, Any}()
 
     json_hg[:n] = nhv(h)
