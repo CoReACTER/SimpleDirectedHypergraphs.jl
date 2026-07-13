@@ -43,5 +43,6 @@ include("models/dual.jl")
 include("algorithms/paths.jl")
 include("algorithms/distance.jl")
 include("algorithms/clustering.jl")
+include("algorithms/connected_components.jl")
 
 end # module
