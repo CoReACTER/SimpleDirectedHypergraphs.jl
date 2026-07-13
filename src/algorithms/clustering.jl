@@ -2,28 +2,33 @@ _inc(hg::H, i::Int, α::Int, side::Int) where {H <: AbstractDirectedHypergraph} 
 
 function _num_quads(hg::H, i::Int) where {H <: AbstractDirectedHypergraph}
     quads = 0
-    nv = nhv(hg)
-    ne = nhe(hg)
 
-    # TODO: there must be a better implementation
-    for α in 1:ne
-        for β in α+1:ne
+    nv = nhv(hg)
+    
+    rel_hes = sort!(collect(union(keys(hg.hg_tail.v2he[i]), keys(hg.hg_head.v2he[i]))))
+
+    for α in 1:length(rel_hes)
+	a = rel_hes[α]
+	for β in α+1:length(rel_hes)
+	    b = rel_hes[β]
+
             for j in 1:nv
                 if i == j
                     continue
                 end
 
-                quads += (
-                    (_inc(hg, i, α, 1) + _inc(hg, i, α, 2))
-                    * (_inc(hg, i, β, 1) + _inc(hg, i, β, 2))
-                    * (_inc(hg, j, α, 1) + _inc(hg, j, α, 2))
-                    * (_inc(hg, j, β, 1) + _inc(hg, j, β, 2))
-                )
-            end
+		if !(
+		    (isnothing(hg[j, a][1]) && isnothing(hg[j, a][2]))
+		    || (isnothing(hg[j, b][1]) && isnothing(hg[j, b][2]))
+		)
+		    quads += 1
+		end
+	    end
         end
     end
     
     quads
+
 end
 
 function _max_num_quads(
@@ -116,7 +121,7 @@ end
     incident on the same two hyperedges `α` and `β`. The QCC is a density, describing the fraction of all possible
     "quads" a particular vertex `i` participates in. It is always true that `0 <= QCC(hg, i) <= 1`.
 """
-function quad_clustering_coefficient(hg::H, i::Int) where {H <: AbstractDirectedHypergraph}
+function SimpleHypergraphs.quad_clustering_coefficient(hg::H, i::Int) where {H <: AbstractDirectedHypergraph}
     # Degrees of hyperedge tails and heads, not including vertex `i`
     tail_deg_exc = zeros(Int, nhe(hg))
     head_deg_exc = zeros(Int, nhe(hg))
@@ -145,6 +150,6 @@ function quad_clustering_coefficient(hg::H, i::Int) where {H <: AbstractDirected
     return q / qmax
 end
 
-function quad_clustering_coefficient(hg::H) where {H <: AbstractDirectedHypergraph}
+function SimpleHypergraphs.quad_clustering_coefficient(hg::H) where {H <: AbstractDirectedHypergraph}
     return [quad_clustering_coefficient(hg, i) for i in 1:nhv(hg)]
 end
