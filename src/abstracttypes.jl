@@ -3,7 +3,7 @@
 
 An abstract directed hypergraph type storing information about vertices and hyperedges.
 """
-abstract type AbstractDirectedHypergraph{T} <: AbstractSimpleHypergraph{T} end
+abstract type AbstractDirectedHypergraph{T} <: AbstractHypergraph{T} end
 
 @traitimpl SimpleHypergraphs.IsDirected{AbstractDirectedHypergraph}
 SimpleHypergraphs.isdirected(::Type{T}) where {T<:AbstractDirectedHypergraph} = true
