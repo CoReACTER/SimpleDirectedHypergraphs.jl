@@ -340,7 +340,7 @@ end
 	sort_by_id::Bool = false,
 	add_original_id_to_meta::Union{Symbol, Nothing} = nothing,
 	show_warning::Bool = true
-    )
+    ) where {H <: AbstractDirectedHypergraph, U <: Real}
 
 Loads a directed hypergraph from an input stream `io` in `HIF` format (Coll et al.,
 DOI: 10.1017/nws.2025.10018).
@@ -367,22 +367,24 @@ function dhg_load(
     add_original_id_to_meta::Union{Symbol, Nothing} = nothing,
     show_warning::Bool = true,
     validate_schema::Bool = true
-) 
+) where {H <: AbstractDirectedHypergraph, U <: Real}
     data = JSON.parse(io; dicttype=Dict{Symbol, Any})
 
     if validate_schema
+	# Complete schema-level validation
 	schema_url = "https://raw.githubusercontent.com/pszufe/HIF-standard/main/schemas/hif_schema.json"
 	schema = String(HTTP.get(schema_url).body)
 	validator = Schema(schema)
 	@assert JSONSchema.validate(validator, data) "Failed HIF schema validation!"
     else
 	# More basic, minimal validation
+	# "incidences" is the only required key in the HIF standard
 	haskey(data, :incidences) || throw(ArgumentError("Missing required attribute 'incidences'"))
     end
 
     if isempty(data[:incidences])
         if isempty(get(data, :edges, [])) && isempty(get(data, :nodes, []))
-            return Hypergraph{
+            return HType{
                 T, 
                 V == :auto ? Nothing : V, 
                 E == :auto ? Nothing : E,
@@ -391,8 +393,8 @@ function dhg_load(
         end
     end
 
-    nodesdf = _build_attr_dataframe(data, :nodes, V, add_original_id_to_meta)
-    edgesdf = _build_attr_dataframe(data, :edges, E, add_original_id_to_meta)
+    nodesdf = SimpleHypergraphs._build_attr_dataframe(data, :nodes, V, add_original_id_to_meta)
+    edgesdf = SimpleHypergraphs._build_attr_dataframe(data, :edges, E, add_original_id_to_meta)
 
     attr_nodes_N = nrow(nodesdf)  
     attr_edges_N = nrow(edgesdf)
@@ -405,6 +407,7 @@ function dhg_load(
         edgesdf.attrs = Nothing[]
     end
 
+    # TODO: you are here
     _add_nodes_and_edges_from_incidences!(data, nodesdf, edgesdf, add_original_id_to_meta)
 
     # narrow types for attrs if V or E is :auto
