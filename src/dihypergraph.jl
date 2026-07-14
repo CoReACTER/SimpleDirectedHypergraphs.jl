@@ -1035,6 +1035,6 @@ A *BF-hypergraph* is a directed hypergraph where all dihyperedges are either B-e
 `is_f_hypergraph`), meaning that they have exactly one vertex in the tail.
 """
 function is_bf_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
-    return all(x -> length(h.hg_tail.he2v[x]) == 1 || length(h.hg_head.he2v[x]), 1:nhe(h))
+    return all(x -> length(h.hg_tail.he2v[x]) == 1 || length(h.hg_head.he2v[x]) == 1, 1:nhe(h))
 end
 

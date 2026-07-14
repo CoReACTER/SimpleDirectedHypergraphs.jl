@@ -21,18 +21,18 @@ dh1[1, 7, 6] = 0.0
 dh1[2, 5, 6] = 1.5
 
 tail_2 = [
-    true nothing nothing nothing nothing nothing nothing nothing nothing
-    nothing true nothing nothing nothing true nothing nothing nothing
-    nothing nothing true nothing nothing nothing true nothing nothing
-    nothing nothing nothing true nothing true true nothing nothing
-    nothing nothing nothing nothing true nothing nothing true true
+    true    nothing nothing nothing nothing nothing nothing nothing nothing
+    nothing true    nothing nothing nothing true    nothing nothing nothing
+    nothing nothing true    nothing nothing nothing true    nothing nothing
+    nothing nothing nothing true    nothing true    true    nothing nothing
+    nothing nothing nothing nothing true    nothing nothing true    true
 ]
 head_2 = [
-    nothing nothing nothing nothing nothing true true nothing nothing
-    true nothing nothing nothing nothing nothing nothing true nothing
-    true nothing nothing nothing nothing nothing nothing nothing true
-    nothing true true nothing true nothing nothing nothing nothing
-    nothing nothing nothing true nothing nothing nothing nothing nothing
+    nothing nothing nothing nothing nothing true    true    nothing nothing
+    true    nothing nothing nothing nothing nothing nothing true    nothing
+    true    nothing nothing nothing nothing nothing nothing nothing true
+    nothing true    true    nothing true    nothing nothing nothing nothing
+    nothing nothing nothing true    nothing nothing nothing nothing nothing
 ]
 dh2 = DirectedHypergraph(tail_2, head_2)
 
@@ -208,8 +208,7 @@ dh2 = DirectedHypergraph(tail_2, head_2)
 end;
 
 @testset "SimpleDirectedHypergraphs special case           " begin
-    # loopless
-    @test !is_loopless(dh1)
+    # is_loopless
 
     # Not strictly loopless
     loose_loop = DirectedHypergraph{Bool}(2,1)
@@ -228,18 +227,92 @@ end;
     @test !is_loopless(loop; strict=true)
     @test !is_loopless(loop; strict=false)
 
-    # simple
+    #Loopless
+    @test is_loopless(dh2; strict=true)
+
+    # is_simple
     # Not loopless
+    @test !is_simple(loop)
     
     # With repeated hyperedge
+    repeated = DirectedHypergraph{Bool}(
+	Matrix{Union{Bool, Nothing}}(
+	    [
+	     nothing nothing true
+	     true    true    nothing
+	     true    true    nothing
+	    ]
+	),
+	Matrix{Union{Bool, Nothing}}(
+	    [
+	     true    true    nothing
+	     nothing nothing nothing
+	     nothing nothing true
+	    ]
+	)
+    )
+    @test !is_simple(repeated)
     
     # Simple
+    @test is_simple(dh2)
 
     # B-hypergraph
+    @test !is_b_hypergraph(dh2)
+    
+    b_hyper = DirectedHypergraph{Bool}(
+	Matrix{Union{Bool, Nothing}}(
+	    [
+		true	true	nothing
+		nothing	true	nothing
+	    ]
+	),
+	Matrix{Union{Bool, Nothing}}(
+	    [
+		true	nothing	true
+		nothing	true	nothing
+	    ]
+	)
+    )
+    @test is_b_hypergraph(b_hyper)
     
     # F-hypergraph
+    @test !is_f_hypergraph(dh2)
+    
+    f_hyper = DirectedHypergraph{Bool}(
+	Matrix{Union{Bool, Nothing}}(
+	    [
+		true	nothing	true
+		nothing	true	nothing
+	    ]
+	),
+	Matrix{Union{Bool, Nothing}}(
+	    [
+		true	true	nothing
+		nothing	true	nothing
+	    ]
+	)
+    )
+    @test is_f_hypergraph(f_hyper)
+
 
     # BF-hypergraph
+    @test is_bf_hypergraph(dh2)
+
+    not_bf = DirectedHypergraph{Bool}(
+	Matrix{Union{Bool, Nothing}}(
+	    [
+		true	nothing	true
+		true	true	nothing
+	    ]
+	),
+	Matrix{Union{Bool, Nothing}}(
+	    [
+		true	true	nothing
+		true	true	nothing
+	    ]
+	)
+    )
+    @test !is_bf_hypergraph(not_bf)
 
 end;
 
