@@ -953,9 +953,9 @@ end
 
 
 """
-    is_loopless(h::H; strict::Bool = true) where {H <: AbstractDirectedHypergraphs}
+    is_loopless(h::H; strict::Bool = true) where {H <: AbstractDirectedHypergraph}
 
-We define a loop in two ways: "strict" and "loose".
+We define a *loop* in two ways: "strict" and "loose".
 
 In the "strict" definition, a dihyperedge is a loop if its tail and head contain exactly the same
 vertices (weights can be different). In the "loose" definition, a dihyperedge is a loop if there is
@@ -963,39 +963,78 @@ any vertex that appears in both the tail and the head.
 
 A directed hypergraph is "loopless" if there are no dihyperedges that are loops.
 """
+function is_loopless(h::H; strict::Bool = true) where {H <: AbstractDirectedHypergraph}
+    loopless = true
+    for e in 1:nhe(h)
+	if strict
+	    if keys(h.hg_tail.he2v[e]) == keys(h.hg_head.he2v[e])
+		loopless = false
+		break
+	    end
+	else
+	    if length(intersect(keys(h.hg_tail.he2v[e]), keys(h.hg_head.he2v[e]))) > 0
+		loopless = false
+		break
+	    end
+	end
+    end
+
+    loopless
+end
 
 """
     is_simple(h::H) where {H <: AbstractDirectedHypergraph}
 
-A directed hypergraph is simple if
+A directed hypergraph is *simple* if it is loopless (using the strict definition; see `is_loopless`)
+and if it is without repeated hyperedge (meaning that there are no two hyperedges in the directed
+hypergraph with identical tails and heads, ignoring the vertex-hyperedge weights).
 """
+function is_simple(h::H) where {H <: AbstractDirectedHypergraph}
+    # Is the dihypergraph without loop?
+    if !is_loopless(h)
+	return false
+    end
+
+    # Is the dihypergraph without repeated hyperedge?
+    he_vertices = [(keys(h.hg_tail.he2v[e]), keys(h.hg_head.he2v[e])) for e in 1:nhe(h)]
+    if any(x -> x > 1, values(countmap(he_vertices)))
+	return false	
+    end
+
+    return true	
+end
+
 
 """
     is_b_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
+
+A *B-edge* is a dihyperedge which may have multiple vertices in the tail but which has exactly one
+vertex in the head. A *B-hypergraph* is a directed hypergraph where all dihyperedges are B-edges.
 """
+function is_b_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
+    return all(x -> length(h.hg_head.he2v[x]) == 1, 1:nhe(h))
+end
 
 
 """
     is_f_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
+
+An *F-edge* is a dihyperedge which may have multiple vertices in the head but which has exactly one
+vertex in the tail. An *F-hypergraph* is a directed hypergraph where all dihyperedges are F-edges.
 """
+function is_f_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
+    return all(x -> length(h.hg_tail.he2v[x]) == 1, 1:nhe(h))
+end
+
 
 """
     is_bf_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
-"""
 
+A *BF-hypergraph* is a directed hypergraph where all dihyperedges are either B-edges (see
+`is_b_hypergraph`), meaning that they have exactly one vertex in the head, or F-edges (see
+`is_f_hypergraph`), meaning that they have exactly one vertex in the tail.
 """
-    is_k_uniform(h::H) where {H <: AbstractDirectedHypergraph}
-"""
-
-"""
-    is_d_regular(h::H) where {H <: AbstractDirectedHypergraph}
-"""
-
-"""
-    is_connected(h::H) where {H <: AbstractDirectedHypergraph}
-"""
-
-"""
-    is_strongly_connected(h::H) where {H <: AbsctractDirectedHypergraphs}
-"""
+function is_bf_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
+    return all(x -> length(h.hg_tail.he2v[x]) == 1 || length(h.hg_head.he2v[x]), 1:nhe(h))
+end
 

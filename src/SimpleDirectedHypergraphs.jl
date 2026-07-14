@@ -22,7 +22,10 @@ export dhg_load
 
 export to_undirected
 
+export is_loopless, is_simple, is_b_hypergraph, is_f_hypergraph, is_bf_hypergraph
+
 export get_weakly_connected_components, get_strongly_connected_components
+export is_connected, is_strongly_connected
 
 export forward_reachable, backward_traceable, is_reachable
 export all_hyperpaths, shortest_hyperpath_kk_heuristic, shortest_hyperpath_kk_ilp

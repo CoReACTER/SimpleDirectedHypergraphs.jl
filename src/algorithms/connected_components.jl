@@ -141,3 +141,26 @@ function get_strongly_connected_components(h::H) where {H<:AbstractDirectedHyper
 
     [sort!(collect(v)) for (_, v) in T if length(v) != 0]
 end
+
+
+"""
+    is_connected(h::H) where {H <: AbstractDirectedHypergraph}
+
+A directed hypergraph is *connected* if it has exactly one connected component.
+
+See `get_weakly_connected_components`.
+"""
+function is_connected(h::H) where {H <: AbstractDirectedHypergraph}
+    return length(get_weakly_connected_components(h)) == 1
+end
+
+"""
+    is_strongly_connected(h::H) where {H <: AbsctractDirectedHypergraphs}
+
+A directed hypergraph is *strongly connected* if it has exactly one strongly connected component.
+
+See `get_strongly_connected_components`.
+"""
+function is_strongly_connected(h::H) where {H <: AbstractDirectedHypergraph}
+    return length(get_strongly_connected_components(h)) == 1
+end
