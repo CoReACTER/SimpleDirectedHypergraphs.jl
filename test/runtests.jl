@@ -21,18 +21,18 @@ dh1[1, 7, 6] = 0.0
 dh1[2, 5, 6] = 1.5
 
 tail_2 = [
-    true nothing nothing nothing nothing nothing nothing nothing nothing
-    nothing true nothing nothing nothing true nothing nothing nothing
-    nothing nothing true nothing nothing nothing true nothing nothing
-    nothing nothing nothing true nothing true true nothing nothing
-    nothing nothing nothing nothing true nothing nothing true true
+    true    nothing nothing nothing nothing nothing nothing nothing nothing
+    nothing true    nothing nothing nothing true    nothing nothing nothing
+    nothing nothing true    nothing nothing nothing true    nothing nothing
+    nothing nothing nothing true    nothing true    true    nothing nothing
+    nothing nothing nothing nothing true    nothing nothing true    true
 ]
 head_2 = [
-    nothing nothing nothing nothing nothing true true nothing nothing
-    true nothing nothing nothing nothing nothing nothing true nothing
-    true nothing nothing nothing nothing nothing nothing nothing true
-    nothing true true nothing true nothing nothing nothing nothing
-    nothing nothing nothing true nothing nothing nothing nothing nothing
+    nothing nothing nothing nothing nothing true    true    nothing nothing
+    true    nothing nothing nothing nothing nothing nothing true    nothing
+    true    nothing nothing nothing nothing nothing nothing nothing true
+    nothing true    true    nothing true    nothing nothing nothing nothing
+    nothing nothing nothing true    nothing nothing nothing nothing nothing
 ]
 dh2 = DirectedHypergraph(tail_2, head_2)
 
@@ -207,7 +207,115 @@ dh2 = DirectedHypergraph(tail_2, head_2)
     @test size(dh1_1)[2] == 2
 end;
 
-# TODO: you are here
+@testset "SimpleDirectedHypergraphs special case           " begin
+    # is_loopless
+
+    # Not strictly loopless
+    loose_loop = DirectedHypergraph{Bool}(2,1)
+    loose_loop[1, 1, 1] = true
+    loose_loop[2, 1, 1] = true
+    loose_loop[2, 2, 1] = true
+
+    @test is_loopless(loose_loop; strict=true)
+    @test !is_loopless(loose_loop; strict=false)
+    
+    # Not loosely loopless
+    loop = DirectedHypergraph{Bool}(2, 1)
+    loop[1, 1, 1] = true
+    loop[2, 1, 1] = true
+
+    @test !is_loopless(loop; strict=true)
+    @test !is_loopless(loop; strict=false)
+
+    #Loopless
+    @test is_loopless(dh2; strict=true)
+
+    # is_simple
+    # Not loopless
+    @test !is_simple(loop)
+    
+    # With repeated hyperedge
+    repeated = DirectedHypergraph{Bool}(
+	Matrix{Union{Bool, Nothing}}(
+	    [
+	     nothing nothing true
+	     true    true    nothing
+	     true    true    nothing
+	    ]
+	),
+	Matrix{Union{Bool, Nothing}}(
+	    [
+	     true    true    nothing
+	     nothing nothing nothing
+	     nothing nothing true
+	    ]
+	)
+    )
+    @test !is_simple(repeated)
+    
+    # Simple
+    @test is_simple(dh2)
+
+    # B-hypergraph
+    @test !is_b_hypergraph(dh2)
+    
+    b_hyper = DirectedHypergraph{Bool}(
+	Matrix{Union{Bool, Nothing}}(
+	    [
+		true	true	nothing
+		nothing	true	nothing
+	    ]
+	),
+	Matrix{Union{Bool, Nothing}}(
+	    [
+		true	nothing	true
+		nothing	true	nothing
+	    ]
+	)
+    )
+    @test is_b_hypergraph(b_hyper)
+    
+    # F-hypergraph
+    @test !is_f_hypergraph(dh2)
+    
+    f_hyper = DirectedHypergraph{Bool}(
+	Matrix{Union{Bool, Nothing}}(
+	    [
+		true	nothing	true
+		nothing	true	nothing
+	    ]
+	),
+	Matrix{Union{Bool, Nothing}}(
+	    [
+		true	true	nothing
+		nothing	true	nothing
+	    ]
+	)
+    )
+    @test is_f_hypergraph(f_hyper)
+
+
+    # BF-hypergraph
+    @test is_bf_hypergraph(dh2)
+
+    not_bf = DirectedHypergraph{Bool}(
+	Matrix{Union{Bool, Nothing}}(
+	    [
+		true	nothing	true
+		true	true	nothing
+	    ]
+	),
+	Matrix{Union{Bool, Nothing}}(
+	    [
+		true	true	nothing
+		true	true	nothing
+	    ]
+	)
+    )
+    @test !is_bf_hypergraph(not_bf)
+
+end;
+
 @testset "SimpleDirectedHypergraphs BipartiteView          " begin
     dh2 = deepcopy(dh1)
 
@@ -317,7 +425,7 @@ end;
 end;
 
 
-@testset "SimpleDirectedHypergraphs random-models          " begin
+@testset "SimpleDirectedHypergraphs random models          " begin
     DHᵣ = random_model(5, 5, DirectedHypergraph)
     @test nhv(DHᵣ) == 5
     @test nhe(DHᵣ) == 5
@@ -363,7 +471,7 @@ end;
     end
 end;
 
-@testset "SimpleDirectedHypergraphs randomwalk             " begin
+@testset "SimpleDirectedHypergraphs random walk            " begin
     dh = DirectedHypergraph{Float64}(8, 9)
     dh[1, 1, 1] = 1.0
     dh.hg_head[2:3, 1] .= 2.5
@@ -400,7 +508,7 @@ end;
 
 end;
 
-@testset "SimpleDirectedHypergraphs connected components" begin
+@testset "SimpleDirectedHypergraphs connected components   " begin
     weak_conn = sort!(get_weakly_connected_components(dh1))
     @test length(weak_conn) == 2
     @test weak_conn[1] == [1, 2, 3, 4, 8]
@@ -414,6 +522,31 @@ end;
     @test strong_conn[4] == [4]
     @test strong_conn[5] == [5, 6, 7]
     @test strong_conn[6] == [8]
+
+    # Neither weakly nor strongly connected
+    @test !SimpleDirectedHypergraphs.is_connected(dh1)
+    @test !SimpleDirectedHypergraphs.is_strongly_connected(dh1)
+
+    # Weakly but not strongly connected
+
+    weak = DirectedHypergraph{Float64}(3, 2)
+    weak[1, 1, 1] = 1.0
+    weak.hg_head[2:3, 1] .= 2.5  # Assignment on a directed hypergraph directly with slices is currently awkward
+    weak[1, 2, 2] = 4.0
+    weak[2, 3, 2] = 5.5
+    @test SimpleDirectedHypergraphs.is_connected(weak)
+    @test !SimpleDirectedHypergraphs.is_strongly_connected(weak)
+
+    strong = DirectedHypergraph{Float64}(3,3)
+    strong[1, 1, 1] = 7.0
+    strong[2, 2, 1] = 8.5
+    strong[1, 2, 2] = 10.0
+    strong[2, 3, 2] = -1.5
+    strong[1, 3, 3] = 0.0
+    strong[2, 1, 3] = 1.5
+    @test SimpleDirectedHypergraphs.is_connected(strong)
+    @test SimpleDirectedHypergraphs.is_strongly_connected(strong)
+
 end;
 
 

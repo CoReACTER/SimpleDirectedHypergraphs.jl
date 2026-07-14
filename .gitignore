@@ -6,3 +6,4 @@
 /docs/build/
 *.txt
 coverage.info
+*.DS_Store
