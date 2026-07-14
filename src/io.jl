@@ -11,7 +11,7 @@ Saves an undirected hypergraph `h` to an output stream `io` in `ehgf` format.
 TODO: what to do about metadata?
 
 """
-function SimpleHypergraphs.hg_save(io::IO, h::H, format::EHGF_Format) where {H <: AbstractDirectedHypergraph}
+function SimpleHypergraphs.hg_save(io::IO, h::H, format::EHGF_Format; pretty::Bool = false) where {H <: AbstractDirectedHypergraph}
     
     h_size = Base.size(h)
     

@@ -952,146 +952,89 @@ function SimpleHypergraphs.nhv(h::H) where {H<:AbstractDirectedHypergraph}
 end
 
 
-function _default_heselect(h::H, v::Int; reverse::Bool=false) where {H<:AbstractDirectedHypergraph}
-    he_tail, he_head = gethyperedges(h, v)
+"""
+    is_loopless(h::H; strict::Bool = true) where {H <: AbstractDirectedHypergraph}
 
-    if reverse
-        hes = he_head
-    else
-        hes = he_tail
+We define a *loop* in two ways: "strict" and "loose".
+
+In the "strict" definition, a dihyperedge is a loop if its tail and head contain exactly the same
+vertices (weights can be different). In the "loose" definition, a dihyperedge is a loop if there is
+any vertex that appears in both the tail and the head.
+
+A directed hypergraph is "loopless" if there are no dihyperedges that are loops.
+"""
+function is_loopless(h::H; strict::Bool = true) where {H <: AbstractDirectedHypergraph}
+    loopless = true
+    for e in 1:nhe(h)
+	if strict
+	    if keys(h.hg_tail.he2v[e]) == keys(h.hg_head.he2v[e])
+		loopless = false
+		break
+	    end
+	else
+	    if length(intersect(keys(h.hg_tail.he2v[e]), keys(h.hg_head.he2v[e]))) > 0
+		loopless = false
+		break
+	    end
+	end
     end
 
-    sort!(collect(keys(hes))), ones(length(hes))
+    loopless
 end
 
+"""
+    is_simple(h::H) where {H <: AbstractDirectedHypergraph}
 
-function _default_vselect(h::H, he::Int; reverse::Bool=false) where {H<:AbstractDirectedHypergraph}
-    vs_tail, vs_head = getvertices(h, he)
-
-    if reverse
-        vs = vs_tail
-    else
-        vs = vs_head
+A directed hypergraph is *simple* if it is loopless (using the strict definition; see `is_loopless`)
+and if it is without repeated hyperedge (meaning that there are no two hyperedges in the directed
+hypergraph with identical tails and heads, ignoring the vertex-hyperedge weights).
+"""
+function is_simple(h::H) where {H <: AbstractDirectedHypergraph}
+    # Is the dihypergraph without loop?
+    if !is_loopless(h)
+	return false
     end
 
-    sort!(collect(keys(vs))), ones(length(vs))
-
-end
-
-
-"""
-    random_walk(
-        h::H,
-        start::Int;
-        heselect::Function,
-        vselect::Function,
-        reverse::bool
-    ) where {H <: AbstractDirectedHypergraph}
-
-Return a next vertex visited in assuming a random walk starting from vertex `start`.
-First a hyperedge is sampled with weights proportional to `heselect` function
-(by default each hyperedge is sampled with the same probability).
-Next a vertex within hyperedge is with weights proportional to `vselect` function
-(by default each vertex, including the source, is sampled with the same probability).
-
-`heselect` and `vselect` functions take two arguments a `Hypergraph` and respectively
-a vertex identifier or a hyperedge identifier. The return values of both functions
-should be respectively a list of hyperedges or vertices and their weights.
-"""
-function SimpleHypergraphs.random_walk(h::H, start::Int;
-    heselect::Function=_default_heselect,
-    vselect::Function=_default_vselect,
-    reverse::Bool=false) where {H<:AbstractDirectedHypergraph}
-    1 <= start <= nhv(h) || throw(ArgumentError("invalid start vertex index"))
-    hes, hew = heselect(h, start, reverse=reverse)
-    he = sample(hes, Weights(hew))
-    ves, vw = vselect(h, he, reverse=reverse)
-    return sample(ves, Weights(vw))
-end
-
-
-"""
-    get_weakly_connected_components(h::H) where {H <: AbstractDirectedHypergraph}
-
-Return an array of weakly connected components in the directed hypergraph `h`
-(array of vectors of vertices) by first converting the directed hypergraph
-into an undirected hypergraph and then obtaining the conected components of
-that hypergraph.
-"""
-function get_weakly_connected_components(h::H) where {H<:AbstractDirectedHypergraph}
-    undirected = to_undirected(h)
-    get_connected_components(undirected)
-end
-
-
-"""
-    _visit!(h::H, v::Int) where {H <: AbstractDirectedHypergraph}
-
-Determines the B-connected component of a vertex `v` in directed hypergraph `h`.
-This is an auxiliary function for `get_strongly_connected_components`, which
-determines the strongly connected components of a directed hypergraph.
-"""
-function _visit(
-    h::H,
-    v::Int
-) where {H<:AbstractDirectedHypergraph}
-    visited = zeros(Bool, nhv(h))
-    visited_tail_nodes = zeros(Int, nhe(h))
-
-    q = Queue{Int}()
-    bcc = Set{Int}()
-    enqueue!(q, v)
-
-    visited[v] = true
-
-    while length(q) > 0
-        u = dequeue!(q)
-        push!(bcc, u)
-
-        tail_hes = gethyperedges(h, u)[1]
-
-        for tail_he in keys(tail_hes)
-            visited_tail_nodes[tail_he] += 1
-
-            tail_vs, head_vs = getvertices(h, tail_he)
-
-            if visited_tail_nodes[tail_he] == length(tail_vs)
-                for head_v in keys(head_vs)
-                    if !visited[head_v]
-                        visited[head_v] = true
-                        enqueue!(q, head_v)
-                    end
-                end
-            end
-        end
+    # Is the dihypergraph without repeated hyperedge?
+    he_vertices = [(keys(h.hg_tail.he2v[e]), keys(h.hg_head.he2v[e])) for e in 1:nhe(h)]
+    if any(x -> x > 1, values(countmap(he_vertices)))
+	return false	
     end
 
-    bcc
+    return true	
 end
 
 
 """
-    get_strongly_connected_components(h::H) where {H <: AbstractDirectedHypergraph}
+    is_b_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
 
-Return an array of strongly connected components in the directed hypergraph `h`
-(array of vectors of vertices), based on the "naive" algorithm of
-Francisco José Martín-Recuerda Moyano (PhD dissertation, 2016).
+A *B-edge* is a dihyperedge which may have multiple vertices in the tail but which has exactly one
+vertex in the head. A *B-hypergraph* is a directed hypergraph where all dihyperedges are B-edges.
+"""
+function is_b_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
+    return all(x -> length(h.hg_head.he2v[x]) == 1, 1:nhe(h))
+end
+
 
 """
-function get_strongly_connected_components(h::H) where {H<:AbstractDirectedHypergraph}
+    is_f_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
 
-    T = Dict{Vector{Int},Set{Int}}()
-
-    for v in 1:nhv(h)
-        bcc_v = _visit(h, v)
-        bcc_sorted = sort(collect(bcc_v))
-        for i in 1:length(bcc_sorted)
-            if !haskey(T, bcc_sorted[1:i])
-                T[bcc_sorted[1:i]] = Set{Int}()
-            end
-        end
-        push!(T[bcc_sorted], v)
-    end
-
-    [sort!(collect(v)) for (_, v) in T if length(v) != 0]
+An *F-edge* is a dihyperedge which may have multiple vertices in the head but which has exactly one
+vertex in the tail. An *F-hypergraph* is a directed hypergraph where all dihyperedges are F-edges.
+"""
+function is_f_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
+    return all(x -> length(h.hg_tail.he2v[x]) == 1, 1:nhe(h))
 end
+
+
+"""
+    is_bf_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
+
+A *BF-hypergraph* is a directed hypergraph where all dihyperedges are either B-edges (see
+`is_b_hypergraph`), meaning that they have exactly one vertex in the head, or F-edges (see
+`is_f_hypergraph`), meaning that they have exactly one vertex in the tail.
+"""
+function is_bf_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
+    return all(x -> length(h.hg_tail.he2v[x]) == 1 || length(h.hg_head.he2v[x]) == 1, 1:nhe(h))
+end
+
