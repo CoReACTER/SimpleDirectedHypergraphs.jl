@@ -10,6 +10,8 @@ Saves an undirected hypergraph `h` to an output stream `io` in `ehgf` format.
 
 TODO: what to do about metadata?
 
+TODO: args
+
 """
 function SimpleHypergraphs.hg_save(io::IO, h::H, format::EHGF_Format; pretty::Bool = false) where {H <: AbstractDirectedHypergraph}
     
@@ -34,45 +36,6 @@ end
 
 
 """
-    hg_save(io::IO, h::DirectedHypergraph, format::JSON_Format; pretty::Bool = false)
-
-Saves a directed hypergraph `h` to an output stream `io` in `json` format.
-
-If `h` has `Composite Types` either for vertex metadata or hyperedges metadata,
-the user has to explicit tell the JSON package about it, for instance using:
-
-TODO: this
-
-See the (JSON.jl documentation)[https://juliaio.github.io/JSON.jl/stable/] for more details.
-
-The `json` in output contains the following information (keys):
-
-* `n` : number of vertices
-* `k` : number of hyperedges
-* `tail` : a matrix representation of the tails of `h`, where rows are vertices and columns are hyperedges
-* `head` : a matrix representation of the heads of `h`, where rows are vertices and columns are hyperedges
-* `v_meta` : vertices metadata
-* `he_meta_tail` : metadata for hyperedge tails
-* `he_meta_head` : metadata for hyperedge heads
-
-"""
-function SimpleHypergraphs.hg_save(io::IO, h::DirectedHypergraph, format::JSON_Format; pretty::Bool = false)
-    json_hg = OrderedDict{Symbol, Any}()
-
-    json_hg[:n] = nhv(h)
-    json_hg[:k] = nhe(h)
-
-    json_hg[:tail] = Matrix(h.hg_tail)
-    json_hg[:head] = Matrix(h.hg_head)
-    
-    json_hg[:v_meta] = h.v_meta
-    json_hg[:he_meta_tail] = h.he_meta_tail
-    json_hg[:he_meta_head] = h.he_meta_head
-
-    JSON.json(io, json_hg; pretty)
-end
-
-"""
     hg_save(
 	io::IO,
 	h::DirectedHypergraph{T, V, E, D},
@@ -81,14 +44,9 @@ end
     ) where {T, V, E, D}
 
 Saves a directed hypergraph `h` to an output stream `io` in `HIF` format (see Coll et al.,
-DOI: 10.1017/nws.2025.10018)
+DOI: 10.1017/nws.2025.10018).
 
-If `h` has `Composite Types` either for vertex metadata or hyperedges metadata,
-the user has to explicit tell the JSON package about it, for instance using:
-
-TODO: this
-
-See the (JSON.jl documentation)[https://juliaio.github.io/JSON.jl/stable/] for more details.
+TODO: handling for composite metadata types
 """
 function SimpleHypergraphs.hg_save(
     io::IO,
@@ -96,26 +54,26 @@ function SimpleHypergraphs.hg_save(
     format::HIF_Format;
     pretty::Bool = false
 ) where {T, V, E, D}
-    incidences = Vector{OrderedDict{Symbol, Union{Int, T}}}()
+    incidences = Vector{OrderedDict{Symbol, Union{Int, String, T}}}()
 
     for i in 1:nhv(h)
 	hes = gethyperedges(h, i)
 	# Tails
 	for j in sort!(collect(keys(hes[1])))
-            push!(incidences, OrderedDict{Symbol, Union{Int, T}}(
+            push!(incidences, OrderedDict{Symbol, Union{Int, String, T}}(
 		:node => i,
 		:edge => j,
-		:weight => T(h[1, i, j]),
+		:weight => T(h[i, j][1]),
 		:direction => "tail"
 	    ))
         end
 
 	# Heads
 	for j in sort!(collect(keys(hes[2])))
-            push!(incidences, OrderedDict{Symbol, Union{Int, T}}(
+            push!(incidences, OrderedDict{Symbol, Union{Int, String, T}}(
 		:node => i,
 		:edge => j,
-		:weight => T(h[2, i, j]),
+		:weight => T(h[i, j][2]),
 		:direction => "head"
 	    ))
         end
@@ -140,9 +98,12 @@ function SimpleHypergraphs.hg_save(
     
     if node_meta_included
         for i in 1:nhv(h)
-            node_entry = OrderedDict{Symbol, Union{Int, typeof(h.v_meta[i])}}(:node => i)
+            node_entry = OrderedDict{
+		Symbol,
+		Union{Int, OrderedDict{Symbol, typeof(h.v_meta[i])}}
+	    }(:node => i)
             if !(isnothing(h.v_meta[i]))
-                node_entry[:attrs] = h.v_meta[i]
+		node_entry[:attrs] = OrderedDict{Symbol, typeof(h.v_meta[i])}(:value => h.v_meta[i])
             end
             push!(json_node_meta, node_entry)
         end
@@ -153,11 +114,14 @@ function SimpleHypergraphs.hg_save(
 		Symbol, 
 		Union{
 		    Int,
-		    Vector{Union{typeof(h.hg_meta_tail[j]), typeof(h.hg_meta_head[j])}}
+		    OrderedDict{Symbol, Union{typeof(h.he_meta_tail[j]), typeof(h.he_meta_head[j])}}
 		}
 	    }(:edge => j)
 	    if !(isnothing(h.he_meta_tail[j]) && isnothing(h.he_meta_head[j]))
-		edge_entry[:attrs] = [h.he_meta_tail[j], h.he_meta_head[j]]
+		edge_entry[:attrs] = OrderedDict{Symbol, Union{typeof(h.he_meta_tail[j]), typeof(h.he_meta_head[j])}}(
+		    :tail => h.he_meta_tail[j],
+		    :head => h.he_meta_head[j]
+		)
             end
             push!(json_edge_meta, edge_entry)
         end
@@ -178,7 +142,6 @@ function SimpleHypergraphs.hg_save(
     
     JSON.json(io, json_dhg; pretty)
 end
-
 
 
 """
@@ -277,56 +240,197 @@ end
 
 
 """
-    dhg_load(
-        io::IO,
-        T::Type{H},
-        format::JSON_Format;
-        T::Type{U} = Bool,
-        D::Type{<:AbstractDict{Int, U}} = Dict{Int,U},
-        V = Nothing,
-        E = Nothing
-    ) where {H <: AbstractDirectedHypergraph, U <: Real}
+    _add_weights_from_incidences!(
+	data::Dict{String, Any},
+	hg::AbstractDirectedHypergraph,
+	edges::DataFrame,
+	nodes::DataFrame
+    )
 
-Loads a hypergraph from a stream `io` from `json` format.
+THIS FUNCTION IS INTERNAL AND SHOULD NOT BE CALLED DIRECTLY.
+Adds weights to the hypergraph `hg` based on the incidences provided in `data`.
+The `edges` and `nodes` DataFrames are used to map edge and node identifiers to
+their respective indices in the hypergraph.
 
-**Arguments**
-
-* `T` : type of weight values stored in the hypergraph's adjacency matrix
-* `D` : dictionary for storing values the default is `Dict{Int, T}`
-* `V` : type of values stored in the vertices of the hypergraph
-* `E` : type of values stored in the edges of the hypergraph
+TODO: args
 
 """
-function dhg_load(
-        io::IO,
-        format::JSON_Format;
-        HType::Type{H} = DirectedHypergraph,
-        T::Type{U} = Bool,
-        D::Type{<:AbstractDict{Int, U}} = Dict{Int, T},
-        V = Nothing,
-        E = Nothing
-    ) where {U <: Real, H<:AbstractDirectedHypergraph}
-    json_hg = JSON.parse(readline(io))
+function _add_weights_from_incidences!(
+    data::Dict{Symbol, Any}, 
+    hg::AbstractDirectedHypergraph{Tuple{Union{T,Nothing},Union{T,Nothing}}}, 
+    edges::DataFrame,
+    nodes::DataFrame
+) where {T <: Real}
+    node_dict = Dict{Union{String, Int}, Int}(id => idx for (id, idx) in zip(nodes.id, 1:nrow(nodes)))
+    edge_dict = Dict{Union{String, Int}, Int}(id => idx for (id, idx) in zip(edges.id, 1:nrow(edges))) 
 
-    m_tail = reshape(JSON.parse(json_hg.tail, Array{Union{T, Nothing}}), json_hg.n, json_hg.k)
-    m_head = reshape(JSON.parse(json_hg.head, Array{Union{T, Nothing}}), json_hg.n, json_hg.k)
+    incidences = data[:incidences]
 
-    if V != Nothing
-        v_meta = JSON.parse(json_hg.v_meta, Array{Union{V, Nothing}})
-    else
-	v_meta = nothing
+    for incidence in incidences
+        node_idx = node_dict[incidence[:node]]
+        edge_idx = edge_dict[incidence[:edge]]
+        weight = get(incidence, :weight, one(T))
+	direction = get(incidence, :direction, "none")
+
+	if direction == "none"
+	    @warn "No direction given for hyperedge incidence. Ignoring; cannot include weight."
+	else
+	    side = direction == "tail" ? 1 : 2
+	    hg[side, node_idx, edge_idx] = T(weight)
+	end
     end
-
-    if E != Nothing
-        he_meta_tail = JSON.parse(json_hg.he_meta_tail, Array{Union{E, Nothing}})
-        he_meta_head = JSON.parse(json_hg.he_meta_head, Array{Union{E, Nothing}})
-    else
-	he_meta_tail = nothing
-	he_meta_head = nothing
-    end
-
-    HType{T, V, E, D}(m_tail, m_head; v_meta=v_meta, he_meta_tail=he_meta_tail, he_meta_head=he_meta_head)
 end
+
+"""
+    _build_attr_dataframe(
+	data::Dict{Symbol, Any},
+	field::Symbol,
+	V::Union{Type, Symbol},
+	add_original_id_to_meta::Union{Symbol, Nothing})
+
+TODO: this
+
+"""
+function _build_attr_dataframe(
+    data::Dict{Symbol, Any},
+    field::Symbol,
+    V::Union{Type, Symbol},
+    add_original_id_to_meta::Union{Symbol, Nothing},
+    to_convert::Union{Nothing, Symbol, AbstractVector{Symbol}}
+)
+    @assert field ∈ (:nodes, :edges)
+    fid = Symbol(string(field)[1:end-1])  # :node or :edge
+
+    # Make list of symbols to type-convert
+    if isnothing(to_convert)
+	to_convert = Symbol[]
+    elseif isa(to_convert, Symbol)
+	to_convert = [to_convert]
+    end
+    
+    target_attr_type = Union{Nothing, Any} 
+    dict_type = Dict{Symbol, Any}
+    if V != :auto
+	if isnothing(add_original_id_to_meta) && length(to_convert) <= 1
+            target_attr_type = Union{Nothing, V}
+	elseif isnothing(add_original_id_to_meta) && length(to_convert) > 1
+	    # Vertex/dihyperedge attributes will (at least initially) be dict if the input type is 
+	    # a dict in need of conversion to the type `V`
+	    target_attr_type = Union{Nothing, Dict{Symbol, V}}
+	    dict_type = Dict{Symbol, V}
+        else
+	    # Including ID type
+	    target_attr_type = Union{Nothing, Dict{Symbol, Union{V, Int, String}}}
+	    dict_type = Dict{Symbol, Union{V, Int, String}}
+	end
+    end
+
+    items = DataFrame(; 
+        id=Union{String, Int}[], 
+        attrs=target_attr_type[]
+    )
+    if !haskey(data, field)
+        return items
+    end
+
+    seen = Set{Union{Int, String}}()
+    for item in data[field]
+        id = item[fid]
+        if id ∈ seen
+            continue
+        end
+        val = get(item, :attrs, nothing)
+
+	# Symbol-value pairs
+	# This works if val is a single metadata value or (if using `hg_save`) a dictionary
+	if length(to_convert) == 0
+	    kvs = [(:only, val)]
+	else
+	    kvs = Tuple{Symbol, Any}[]
+	    for tc in to_convert
+		push!(kvs, (tc, get(val, tc, nothing)))
+	    end
+	end
+
+	# Gather up everything that's going to be a metadata "value" for this vertex/dihyperedge
+	for_attrs = Tuple{Symbol, Any}[]
+	for (k, v) in kvs
+	    if isnothing(v)
+		continue
+	    end
+
+	    if V == String && !(isa(v, String))
+		push!(for_attrs, (k, JSON.json(v)))
+	    elseif V != :auto
+		push!(for_attrs, (k, convert(V, v)))
+	    else
+		push!(for_attrs, (k, v))
+	    end
+	end
+
+	if !isnothing(add_original_id_to_meta)
+	    push!(for_attrs, (add_original_id_to_meta, id))
+	end
+	    
+	if length(for_attrs) == 1 && for_attrs[1][1] in [:only, :value]
+	    val = for_attrs[1][2]
+	else
+	    val = dict_type()
+	    for (k, v) in for_attrs
+		val[k] = v
+	    end
+	end
+
+        push!(items, [id, val])
+        push!(seen, id)
+    end
+    items
+end
+
+"""
+    _separate_tail_head_meta(data::Vector{Any})
+
+TODO: this
+"""
+function _separate_tail_head_meta(data::Vector{V}) where {V}
+    # Simplest case - "tail" and "head" as separate columns
+    el = eltype(data)
+    if el isa AbstractDict
+	if !(all(x -> (:tail in keys(x) && :head in keys(x)), data))
+	    # No clearly marked tail and head data
+	    return (data, data)
+	else
+	    t = el[]
+	    h = el[]
+
+	    for d in data
+		thist = el()
+		thish = el()
+
+		for (k, v) in d
+		    if k != :tail
+			thish[k] = v
+		    end
+		    if k != :head
+			thist[k] = v
+		    end
+		end
+		push!(t, thist)
+		push!(h, thish)
+	    end
+
+	    return (t, h)
+	end
+    elseif el <: NTuple{2, Any}
+	# If each edge has two values, assume these are the tail and head metadata
+	return ([e[1] for e in data], [e[2] for e in data])
+    else
+	# If there aren't multiple keys, then assume that data is overall tail and head metadata
+	# Cannot separate
+	return (data, data)
+    end
+end
+
 
 """
     dhg_load(
@@ -354,6 +458,9 @@ Vertex and hyperedge indices are regenerated to match the 1-based indexing schem
 `SimpleDirectedHypergraphs.jl`. The original indices can be preserved by setting
 `add_original_id_to_meta` to a Symbol representing the key under which those indices will be stored
 in the metadata dictionary.
+
+TODO: args
+
 """
 function dhg_load(
     io::IO,
@@ -366,21 +473,13 @@ function dhg_load(
     sort_by_id::Bool = false,
     add_original_id_to_meta::Union{Symbol, Nothing} = nothing,
     show_warning::Bool = true,
-    validate_schema::Bool = true
+    to_convert::Union{Nothing, Symbol, AbstractVector{Symbol}}=:auto
 ) where {H <: AbstractDirectedHypergraph, U <: Real}
     data = JSON.parse(io; dicttype=Dict{Symbol, Any})
 
-    if validate_schema
-	# Complete schema-level validation
-	schema_url = "https://raw.githubusercontent.com/pszufe/HIF-standard/main/schemas/hif_schema.json"
-	schema = String(HTTP.get(schema_url).body)
-	validator = Schema(schema)
-	@assert JSONSchema.validate(validator, data) "Failed HIF schema validation!"
-    else
-	# More basic, minimal validation
-	# "incidences" is the only required key in the HIF standard
-	haskey(data, :incidences) || throw(ArgumentError("Missing required attribute 'incidences'"))
-    end
+    # Basic, minimal validation
+    # "incidences" is the only required key in the HIF standard
+    haskey(data, :incidences) || throw(ArgumentError("Missing required attribute 'incidences'"))
 
     if isempty(data[:incidences])
         if isempty(get(data, :edges, [])) && isempty(get(data, :nodes, []))
@@ -393,8 +492,20 @@ function dhg_load(
         end
     end
 
-    nodesdf = SimpleHypergraphs._build_attr_dataframe(data, :nodes, V, add_original_id_to_meta)
-    edgesdf = SimpleHypergraphs._build_attr_dataframe(data, :edges, E, add_original_id_to_meta)
+    nodesdf = _build_attr_dataframe(
+	data,
+	:nodes,
+	V,
+	add_original_id_to_meta,
+	(to_convert==:auto ? :value : to_convert)
+    )
+    edgesdf = _build_attr_dataframe(
+	data,
+	:edges,
+	E,
+	add_original_id_to_meta,
+	(to_convert==:auto ? [:tail, :head] : to_convert)
+    )
 
     attr_nodes_N = nrow(nodesdf)  
     attr_edges_N = nrow(edgesdf)
@@ -407,19 +518,19 @@ function dhg_load(
         edgesdf.attrs = Nothing[]
     end
 
-    # TODO: you are here
-    _add_nodes_and_edges_from_incidences!(data, nodesdf, edgesdf, add_original_id_to_meta)
+    SimpleHypergraphs._add_nodes_and_edges_from_incidences!(data, nodesdf, edgesdf, add_original_id_to_meta)
 
     # narrow types for attrs if V or E is :auto
     if V == :auto
-        _sanitize_types_items!(nodesdf)
+        SimpleHypergraphs._sanitize_types_items!(nodesdf)
     end
     if E == :auto
-        _sanitize_types_items!(edgesdf)
+        SimpleHypergraphs._sanitize_types_items!(edgesdf)
     end
 
-    _add_id_sort_column!(nodesdf)
-    _add_id_sort_column!(edgesdf)
+    SimpleHypergraphs._add_id_sort_column!(nodesdf)
+    SimpleHypergraphs._add_id_sort_column!(edgesdf)
+
     # if all nodes or edges were discovered from incidences, sort by id to have consistent ordering
     if attr_nodes_N == 0
         sort!(nodesdf, :id_sort)
@@ -443,16 +554,17 @@ function dhg_load(
         end
     end
 
-    hg = HType{
-        T, 
-        eltype(nodesdf.attrs), 
-        eltype(edgesdf.attrs), 
-        D,
-    }(nrow(nodesdf), nrow(edgesdf), nodesdf.attrs, edgesdf.attrs)
+    tail_meta, head_meta = _separate_tail_head_meta(edgesdf.attrs)
+
+    hg = HType{T, eltype(nodesdf.attrs), eltype(tail_meta), D}(
+	    nrow(nodesdf), nrow(edgesdf), nodesdf.attrs, tail_meta, head_meta 
+         )
 
     _add_weights_from_incidences!(data, hg, edgesdf, nodesdf)
-    hg    
+
+    hg
 end
+
 
 """
     dhg_load(
