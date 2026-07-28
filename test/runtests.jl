@@ -97,17 +97,15 @@ dh2 = DirectedHypergraph(tail_2, head_2)
 
         SimpleHypergraphs.hg_save(path, dh1; format=HIF_Format())
 
-	@info "Got to HIF load"
         loaded_hg = dhg_load(path; format=HIF_Format(), HType=DirectedHypergraph, T=Float64, V=Int, E=String)
-	@info "Got past HIF load"
 
         @test dh1 == loaded_hg
         @test dh1.v_meta == loaded_hg.v_meta
-        @test dh1.he_meta_tail == loaded_hg.he_meta_tail
-        @test dh1.he_meta_head == loaded_hg.he_meta_head
+	@test [Dict(:tail => i) for i in dh1.he_meta_tail] == loaded_hg.he_meta_tail
+	@test [Dict(:head => i) for i in dh1.he_meta_head] == loaded_hg.he_meta_head
 
         @test get_vertex_meta(dh1, 1) == get_vertex_meta(loaded_hg, 1)
-        @test get_hyperedge_meta(dh1, 2) == get_hyperedge_meta(loaded_hg, 2)
+	@test get_hyperedge_meta(loaded_hg, 2) == (Dict(:tail => "2"), Dict(:head => "2"))
     end
 
     @test_throws ArgumentError dhg_load("data/malformedcomment.ehgf"; format=EHGF_Format(), HType=DirectedHypergraph, T=Int)

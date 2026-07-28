@@ -308,20 +308,20 @@ function _build_attr_dataframe(
 	to_convert = [to_convert]
     end
     
-    target_attr_type = Union{Nothing, Any} 
+    target_attr_type = Any 
     dict_type = Dict{Symbol, Any}
     if V != :auto
 	if isnothing(add_original_id_to_meta) && length(to_convert) <= 1
-            target_attr_type = Union{Nothing, V}
+            target_attr_type = V
 	elseif isnothing(add_original_id_to_meta) && length(to_convert) > 1
 	    # Vertex/dihyperedge attributes will (at least initially) be dict if the input type is 
 	    # a dict in need of conversion to the type `V`
-	    target_attr_type = Union{Nothing, Dict{Symbol, V}}
-	    dict_type = Dict{Symbol, V}
+	    target_attr_type = Dict{Symbol, V}
+	    dict_type = target_attr_type
         else
 	    # Including ID type
-	    target_attr_type = Union{Nothing, Dict{Symbol, Union{V, Int, String}}}
-	    dict_type = Dict{Symbol, Union{V, Int, String}}
+	    target_attr_type = Dict{Symbol, Union{V, Int, String}}
+	    dict_type = target_attr_type
 	end
     end
 
@@ -343,10 +343,10 @@ function _build_attr_dataframe(
 
 	# Symbol-value pairs
 	# This works if val is a single metadata value or (if using `hg_save`) a dictionary
+	kvs = Tuple{Symbol, Any}[]
 	if length(to_convert) == 0
-	    kvs = [(:only, val)]
+	    push!(kvs, (:only, val))
 	else
-	    kvs = Tuple{Symbol, Any}[]
 	    for tc in to_convert
 		push!(kvs, (tc, get(val, tc, nothing)))
 	    end
@@ -384,6 +384,7 @@ function _build_attr_dataframe(
         push!(items, [id, val])
         push!(seen, id)
     end
+
     items
 end
 
@@ -392,20 +393,20 @@ end
 
 TODO: this
 """
-function _separate_tail_head_meta(data::Vector{V}) where {V}
+function _separate_tail_head_meta(data::Vector{X}) where {X}
     # Simplest case - "tail" and "head" as separate columns
-    el = eltype(data)
-    if el isa AbstractDict
+    if X <: AbstractDict
 	if !(all(x -> (:tail in keys(x) && :head in keys(x)), data))
 	    # No clearly marked tail and head data
 	    return (data, data)
 	else
-	    t = el[]
-	    h = el[]
+
+	    t = X[]
+	    h = X[]
 
 	    for d in data
-		thist = el()
-		thish = el()
+		thist = X()
+		thish = X()
 
 		for (k, v) in d
 		    if k != :tail
@@ -421,7 +422,7 @@ function _separate_tail_head_meta(data::Vector{V}) where {V}
 
 	    return (t, h)
 	end
-    elseif el <: NTuple{2, Any}
+    elseif X <: NTuple{2, Any}
 	# If each edge has two values, assume these are the tail and head metadata
 	return ([e[1] for e in data], [e[2] for e in data])
     else
