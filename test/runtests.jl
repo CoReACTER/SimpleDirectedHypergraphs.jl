@@ -330,6 +330,7 @@ end;
     @test Graphs.has_vertex(b, 0) == false
     @test Graphs.has_vertex(b, 1) == true
     @test Graphs.has_edge(b, 1, 1) == false
+    @test Graphs.has_edge(b, 8, 2) == true
     @test Graphs.nv(Graphs.zero(b)) == 0
 
     @test Graphs.is_directed(b) == true
@@ -342,6 +343,7 @@ end;
     @test sort(collect(Graphs.outneighbors(b, 5))) == [11]
     @test sort(collect(Graphs.outneighbors(b, 1))) == [8]
     @test sort(collect(Graphs.inneighbors(b, 2))) == [8]
+    @test sort(collect(Graphs.inneighbors(b, 8))) == [1]
 
     @test Set(Graphs.vertices(b)) == Set(1:Graphs.nv(b))
 
@@ -396,6 +398,7 @@ end;
     @test sort(Graphs.outneighbors(t, 5)) == [6]
     @test sort(Graphs.inneighbors(t, 4)) == [3]
     @inferred Graphs.all_neighbors(t, 1)
+    @test Graphs.all_neighbors(t, 1; incoming=false, outgoing=false) == []
 
     @test Graphs.has_edge(t, 1, 2) == true
     @test Graphs.has_edge(t, 1, 5) == false
@@ -467,6 +470,10 @@ end;
     @test nhe(DHδ) == 5
     @test all(length.(DHδ.hg_tail.v2he) .+ length.(DHδ.hg_head.v2he) .== 3)
 
+    Dhδ2 = random_dregular_model(5, 5, 3, DirectedHypergraph; no_self_loops=true)
+    @test nhv(Dhδ2) == 5
+    @test nhe(Dhδ2) == 5
+    @test all(length.(Dhδ2.hg_tail.v2he) .+ length.(Dhδ2.hg_head.v2he) .== 3)
     @test_throws ErrorException random_dregular_model(1, 3, 1, DirectedHypergraph; no_self_loops=true)
 
     DHδ_nsl = random_kuniform_model(5, 5, 3, DirectedHypergraph; no_self_loops=true)
@@ -778,4 +785,30 @@ end
     @test isapprox(qdh2[3], 0.15384615384615385)
     @test isapprox(qdh2[4], 0.15384615384615385)
     @test isapprox(qdh2[5], 0.16666666666666666)
+
+    c3_tail = [
+	true	true	nothing	nothing	true	nothing
+	nothing	nothing	true	nothing	true	nothing
+	nothing	nothing	nothing	true	true	nothing
+	true	nothing	nothing	nothing	true	nothing
+	nothing	nothing	true	nothing	true	nothing
+	true	true	true	true	true	nothing
+    ]
+    c3_head = [
+	nothing	nothing	true	nothing	nothing	true
+	nothing	true	nothing	nothing	nothing	true
+	true	nothing	nothing	nothing	nothing	true
+	nothing	nothing	true	nothing	nothing	true
+	nothing	nothing	true	true	nothing	true
+	true	true	true	true	true	true
+    ]
+    hg3 = DirectedHypergraph(c3_tail, c3_head)
+    qhg3 = quad_clustering_coefficient(hg3)
+    @test isapprox(qhg3[1], 0.4827586206896552)
+    @test isapprox(qhg3[2], 0.5588235294117647)
+    @test isapprox(qhg3[3], 0.5517241379310345)
+    @test isapprox(qhg3[4], 0.5526315789473685)
+    @test isapprox(qhg3[5], 0.36)
+    @test isapprox(qhg3[6], 0.1827956989247312)
+
 end;
