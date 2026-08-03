@@ -63,4 +63,4 @@ Currently implemented features include:
 - Shortest-path, distance, and diameter algorithms, based on the work of Krieger & Kececioglu (DOI: [10.1186/s13015-022-00217-9](https://doi.org/10.1186/s13015-022-00217-9) and DOI: [10.1089/cmb.2023.0242](http://doi.org/10.1089/cmb.2023.0242))
 - The quad clustering algorithm (DOI: [10.1063/5.0188246](https://doi.org/10.1063/5.0188246)) for calculating the degree of clustering
 
-If you have suggestions of features that you want added, please make suggestions in the [Codeberg Issues](https://codeberg.org/CoReACTER/SimpleDirectedHypergraphs.jl/issues) page. You are also encouraged to add new features yourself. Pull requests are always welcome; see our guide to contributing for more information.
+If you have suggestions of features that you want added, please make suggestions in the [Codeberg Issues](https://codeberg.org/CoReACTER/SimpleDirectedHypergraphs.jl/issues) page. You are also encouraged to add new features yourself. Pull requests are always welcome; see our guide to [contributing](./CONTRIBUTING.md) for more information.
