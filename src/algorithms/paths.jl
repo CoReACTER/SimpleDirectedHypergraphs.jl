@@ -9,9 +9,9 @@
 
 """
 function forward_reachable(
-    hg::H,
-    source::Int,
-) where {H<:AbstractDirectedHypergraph}
+        hg::H,
+        source::Int,
+    ) where {H <: AbstractDirectedHypergraph}
     # Priority queue of reached vertices
     Q = Queue{Int}()
     enqueue!(Q, source)
@@ -60,9 +60,9 @@ end
     that are reachable, following hyperedges along their reverse direction (i.e., from head to tail).
 """
 function backward_traceable(
-    hg::H,
-    target::Int,
-) where {H<:AbstractDirectedHypergraph}
+        hg::H,
+        target::Int,
+    ) where {H <: AbstractDirectedHypergraph}
     # Priority queue of reached vertices
     Q = Queue{Int}()
     enqueue!(Q, target)
@@ -141,11 +141,11 @@ end
     (connected to all target vertices by a single, 0-cost hyperedge).
 """
 function shortest_hyperpath_kk_heuristic(
-    hg::H,
-    source::Int,
-    target::Int,
-    hyperedge_weights::AbstractVector{T}
-) where {H<:AbstractDirectedHypergraph,T<:Real}
+        hg::H,
+        source::Int,
+        target::Int,
+        hyperedge_weights::AbstractVector{T}
+    ) where {H <: AbstractDirectedHypergraph, T <: Real}
 
     reached_vs = BitVector(falses(nhv(hg)))
     reached_vs[source] = true
@@ -158,17 +158,21 @@ function shortest_hyperpath_kk_heuristic(
 
     hyperedge_costs = fill(typemax(T), nhe(hg))
 
-    hyperedge_heap_points = Vector{Union{Nothing,Int}}(nothing, nhe(hg))
+    hyperedge_heap_points = Vector{Union{Nothing, Int}}(nothing, nhe(hg))
 
     # Verify that the target can be reached
     fr = forward_reachable(hg, source)
     @assert target ∈ fr[1]
 
     # Doubly reachable hyperedges
-    dr_hes = sort!(collect(intersect(
-        fr[2],
-        backward_traceable(hg, target)[2]
-    )))
+    dr_hes = sort!(
+        collect(
+            intersect(
+                fr[2],
+                backward_traceable(hg, target)[2]
+            )
+        )
+    )
 
     # Eliminate non-doubly reachable hyperedges
     hg_copy = deepcopy(hg)
@@ -198,7 +202,7 @@ function shortest_hyperpath_kk_heuristic(
                     if !reached_vs[v]
                         hes_tail_count[f] -= 1
                     end
-                    
+
                     if hes_tail_count[f] == 0
                         push!(out_edges, f)
                         marked_hes[f] = true
@@ -221,9 +225,9 @@ function shortest_hyperpath_kk_heuristic(
                     (
                         sum(
                             hyperedge_weights[x]
-                            for x in short_hyperpath_vhe(hg, source, f, hyperedge_inedges, hyperedge_costs)
+                                for x in short_hyperpath_vhe(hg, source, f, hyperedge_inedges, hyperedge_costs)
                         ),
-                        f
+                        f,
                     )
                 )
             elseif isnothing(hyperedge_heap_points[f]) && hes_tail_count[f] == 0
@@ -232,9 +236,9 @@ function shortest_hyperpath_kk_heuristic(
                     (
                         sum(
                             hyperedge_weights[x]
-                            for x in short_hyperpath_vhe(hg, source, f, hyperedge_inedges, hyperedge_costs)
+                                for x in short_hyperpath_vhe(hg, source, f, hyperedge_inedges, hyperedge_costs)
                         ),
-                        f
+                        f,
                     )
                 )
             end
@@ -258,11 +262,11 @@ function shortest_hyperpath_kk_heuristic(
 end
 
 function shortest_hyperpath_kk_heuristic(
-    hg::DirectedHypergraph{T,V,E,D},
-    source::Int,
-    targets::Set{Int},
-    hyperedge_weights::AbstractVector{S}
-) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
+        hg::DirectedHypergraph{T, V, E, D},
+        source::Int,
+        targets::Set{Int},
+        hyperedge_weights::AbstractVector{S}
+    ) where {S <: Real, T <: Real, V, E, D <: AbstractDict{Int, T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -270,8 +274,8 @@ function shortest_hyperpath_kk_heuristic(
     metatarget = SimpleHypergraphs.add_vertex!(hg_copy)
     meta_he = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
-        vertices_tail=D(x => convert(T, 0) for x in targets),
-        vertices_head=D(metatarget => convert(T, 0))
+        vertices_tail = D(x => convert(T, 0) for x in targets),
+        vertices_head = D(metatarget => convert(T, 0))
     )
 
     path = shortest_hyperpath_kk_heuristic(
@@ -282,15 +286,15 @@ function shortest_hyperpath_kk_heuristic(
     )
 
     # Remove the fictitious hyperedge from the targets to the metatarget
-    setdiff(path, Set{Int}(meta_he))
+    return setdiff(path, Set{Int}(meta_he))
 end
 
 function shortest_hyperpath_kk_heuristic(
-    hg::DirectedHypergraph{T,V,E,D},
-    sources::Set{Int},
-    target::Int,
-    hyperedge_weights::AbstractVector{S}
-) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
+        hg::DirectedHypergraph{T, V, E, D},
+        sources::Set{Int},
+        target::Int,
+        hyperedge_weights::AbstractVector{S}
+    ) where {S <: Real, T <: Real, V, E, D <: AbstractDict{Int, T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -298,8 +302,8 @@ function shortest_hyperpath_kk_heuristic(
     metasource = SimpleHypergraphs.add_vertex!(hg_copy)
     meta_he = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
-        vertices_tail=D(metasource => convert(T, 0)),
-        vertices_head=D(x => convert(T, 0) for x in sources)
+        vertices_tail = D(metasource => convert(T, 0)),
+        vertices_head = D(x => convert(T, 0) for x in sources)
     )
 
     path = shortest_hyperpath_kk_heuristic(
@@ -310,15 +314,15 @@ function shortest_hyperpath_kk_heuristic(
     )
 
     # Remove the fictitious hyperedge from the metasource to the sources
-    setdiff(path, Set{Int}(meta_he))
+    return setdiff(path, Set{Int}(meta_he))
 end
 
 function shortest_hyperpath_kk_heuristic(
-    hg::DirectedHypergraph{T,V,E,D},
-    sources::Set{Int},
-    targets::Set{Int},
-    hyperedge_weights::AbstractVector{S}
-) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
+        hg::DirectedHypergraph{T, V, E, D},
+        sources::Set{Int},
+        targets::Set{Int},
+        hyperedge_weights::AbstractVector{S}
+    ) where {S <: Real, T <: Real, V, E, D <: AbstractDict{Int, T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -326,8 +330,8 @@ function shortest_hyperpath_kk_heuristic(
     metasource = SimpleHypergraphs.add_vertex!(hg_copy)
     meta_he_source = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
-        vertices_tail=D(metasource => convert(T, 0)),
-        vertices_head=D(x => convert(T, 0) for x in sources)
+        vertices_tail = D(metasource => convert(T, 0)),
+        vertices_head = D(x => convert(T, 0) for x in sources)
     )
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -335,8 +339,8 @@ function shortest_hyperpath_kk_heuristic(
     metatarget = SimpleHypergraphs.add_vertex!(hg_copy)
     meta_he_target = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
-        vertices_tail=D(x => convert(T, 0) for x in targets),
-        vertices_head=D(metatarget => convert(T, 0))
+        vertices_tail = D(x => convert(T, 0) for x in targets),
+        vertices_head = D(metatarget => convert(T, 0))
     )
 
     path = shortest_hyperpath_kk_heuristic(
@@ -347,7 +351,7 @@ function shortest_hyperpath_kk_heuristic(
     )
 
     # Remove fictitious hyperedges
-    setdiff(path, Set{Int}([meta_he_source, meta_he_target]))
+    return setdiff(path, Set{Int}([meta_he_source, meta_he_target]))
 end
 
 """
@@ -362,12 +366,12 @@ end
     prune unnecessary hyperedges to achieve a (generally shorter) hyperpath. 
 """
 function short_hyperpath_vhe(
-    hg::H,
-    v::Int,
-    he::Int,
-    he_inedges::Vector{Set{Int}},
-    he_costs::AbstractVector{T}
-) where {H<:AbstractDirectedHypergraph, T<:Real}
+        hg::H,
+        v::Int,
+        he::Int,
+        he_inedges::Vector{Set{Int}},
+        he_costs::AbstractVector{T}
+    ) where {H <: AbstractDirectedHypergraph, T <: Real}
     marked_hes = BitVector(falses(nhe(hg)))
 
     Q = Queue{Int}()
@@ -393,7 +397,7 @@ function short_hyperpath_vhe(
     end
 
     # TODO: try to be more clever about this
-    superpath = sort(collect(superpath), by=x -> he_costs[x], rev=true)
+    superpath = sort(collect(superpath), by = x -> he_costs[x], rev = true)
     hg_copy = deepcopy(hg)
     # Eliminate all hyperedges not on superpath
     hg_copy.hg_tail[:, InvertedIndices.Not(superpath)] .= nothing
@@ -431,11 +435,11 @@ end
     hypergraph `hg`.
 """
 function is_reachable(
-    hg::H,
-    source::Int,
-    target::Int,
-    target_type::Symbol
-) where {H<:AbstractDirectedHypergraph}
+        hg::H,
+        source::Int,
+        target::Int,
+        target_type::Symbol
+    ) where {H <: AbstractDirectedHypergraph}
     @assert target_type ∈ [:vertex, :hyperedge] "`target_type` must be :vertex or :hyperedge"
 
     fr = forward_reachable(hg, source)
@@ -459,7 +463,7 @@ end
     If one exists, obtain a hyperpath in directed hypergraph `hg` from a source vertex with index `source` to a target
     vertex with index `target`. The hyperpath cannot include any hyperedge with index included in the set `out`.
 """
-function get_hyperpath(hg::H, source::Int, target::Int, out::Set{Int}) where {H<:AbstractDirectedHypergraph}
+function get_hyperpath(hg::H, source::Int, target::Int, out::Set{Int}) where {H <: AbstractDirectedHypergraph}
     # Remove excluded hyperedges
     hg_copy = deepcopy(hg)
     inds = sort(collect(out))
@@ -521,11 +525,11 @@ end
     *metasource* vertex (connected to all source vertices by a single hyperedge) and/or *metatarget* vertex
     (connected to all target vertices by a single hyperedge).
 """
-function all_hyperpaths(hg::H, source::Int, target::Int) where {H<:AbstractDirectedHypergraph}
+function all_hyperpaths(hg::H, source::Int, target::Int) where {H <: AbstractDirectedHypergraph}
     # Queue of subproblems
     # Subproblem is defined as a "out" set of hyperedges (which must not be present in a path) and "keep" hyperedges
     # which must be present in the path
-    Q = Queue{Tuple{Set{Int},Set{Int}}}()
+    Q = Queue{Tuple{Set{Int}, Set{Int}}}()
 
     paths = Set{Set{Int}}()
 
@@ -548,14 +552,14 @@ function all_hyperpaths(hg::H, source::Int, target::Int) where {H<:AbstractDirec
         end
     end
 
-    paths
+    return paths
 end
 
 function all_hyperpaths(
-    hg::DirectedHypergraph{T,V,E,D},
-    source::Int,
-    targets::Set{Int}
-) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
+        hg::DirectedHypergraph{T, V, E, D},
+        source::Int,
+        targets::Set{Int}
+    ) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -563,8 +567,8 @@ function all_hyperpaths(
     metatarget = SimpleHypergraphs.add_vertex!(hg_copy)
     meta_he = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
-        vertices_tail=D(x => convert(T, 0) for x in targets),
-        vertices_head=D(metatarget => convert(T, 0))
+        vertices_tail = D(x => convert(T, 0) for x in targets),
+        vertices_head = D(metatarget => convert(T, 0))
     )
 
     paths = all_hyperpaths(
@@ -578,10 +582,10 @@ function all_hyperpaths(
 end
 
 function all_hyperpaths(
-    hg::DirectedHypergraph{T,V,E,D},
-    sources::Set{Int},
-    target::Int
-) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
+        hg::DirectedHypergraph{T, V, E, D},
+        sources::Set{Int},
+        target::Int
+    ) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -589,8 +593,8 @@ function all_hyperpaths(
     metasource = SimpleHypergraphs.add_vertex!(hg_copy)
     meta_he = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
-        vertices_tail=D(metasource => convert(T, 0)),
-        vertices_head=D(x => convert(T, 0) for x in sources)
+        vertices_tail = D(metasource => convert(T, 0)),
+        vertices_head = D(x => convert(T, 0) for x in sources)
     )
 
     paths = all_hyperpaths(
@@ -604,10 +608,10 @@ function all_hyperpaths(
 end
 
 function all_hyperpaths(
-    hg::DirectedHypergraph{T,V,E,D},
-    sources::Set{Int},
-    targets::Set{Int}
-) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
+        hg::DirectedHypergraph{T, V, E, D},
+        sources::Set{Int},
+        targets::Set{Int}
+    ) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -615,8 +619,8 @@ function all_hyperpaths(
     metasource = SimpleHypergraphs.add_vertex!(hg_copy)
     meta_he_source = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
-        vertices_tail=D(metasource => convert(T, 0)),
-        vertices_head=D(x => convert(T, 0) for x in sources)
+        vertices_tail = D(metasource => convert(T, 0)),
+        vertices_head = D(x => convert(T, 0) for x in sources)
     )
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -624,8 +628,8 @@ function all_hyperpaths(
     metatarget = SimpleHypergraphs.add_vertex!(hg_copy)
     meta_he_target = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
-        vertices_tail=D(x => convert(T, 0) for x in targets),
-        vertices_head=D(metatarget => convert(T, 0))
+        vertices_tail = D(x => convert(T, 0) for x in targets),
+        vertices_head = D(metatarget => convert(T, 0))
     )
 
     paths = all_hyperpaths(
@@ -651,11 +655,11 @@ end
 
 """
 function initialize_ilp_model(
-    hg::H,
-    source::Int,
-    target::Int,
-    hyperedge_weights::AbstractVector{T}
-) where {H<:AbstractDirectedHypergraph, T<:Real}
+        hg::H,
+        source::Int,
+        target::Int,
+        hyperedge_weights::AbstractVector{T}
+    ) where {H <: AbstractDirectedHypergraph, T <: Real}
 
     # First, verify that the problem is well-posed
     # That is, can `target` be reached from `source`
@@ -727,7 +731,7 @@ function initialize_ilp_model(
 
         cross = [
             issubset(Set(keys(hg.hg_tail.he2v[i])), cut_d) && !issubset(Set(keys(hg.hg_head.he2v[i])), cut_d)
-            for i in 1:nhe(hg)
+                for i in 1:nhe(hg)
         ]
         push!(crosses, BitVector(cross))
 
@@ -780,11 +784,11 @@ end
     (connected to all target vertices by a single, 0-cost hyperedge).
 """
 function shortest_hyperpath_kk_ilp(
-    hg::H,
-    source::Int,
-    target::Int,
-    hyperedge_weights::AbstractVector{T}
-) where {H<:AbstractDirectedHypergraph,T<:Real}
+        hg::H,
+        source::Int,
+        target::Int,
+        hyperedge_weights::AbstractVector{T}
+    ) where {H <: AbstractDirectedHypergraph, T <: Real}
 
     # TODO: do I need to carry `x` over like this? Not sure about variable scope
     model, x, cuts, crosses = initialize_ilp_model(hg, source, target, hyperedge_weights)
@@ -792,7 +796,7 @@ function shortest_hyperpath_kk_ilp(
     JuMP.optimize!(model)
 
     # Convert floating-point solution into BitVector
-    # TODO: Is this necessary w/ JuMP? Or will the output really be binary? 
+    # TODO: Is this necessary w/ JuMP? Or will the output really be binary?
     solution = JuMP.value.(x) .> 0.5
 
     # Check for s,t-cuts that are not crossed by the current solution
@@ -815,11 +819,11 @@ function shortest_hyperpath_kk_ilp(
 end
 
 function shortest_hyperpath_kk_ilp(
-    hg::DirectedHypergraph{T,V,E,D},
-    source::Int,
-    targets::Set{Int},
-    hyperedge_weights::AbstractVector{S}
-) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
+        hg::DirectedHypergraph{T, V, E, D},
+        source::Int,
+        targets::Set{Int},
+        hyperedge_weights::AbstractVector{S}
+    ) where {S <: Real, T <: Real, V, E, D <: AbstractDict{Int, T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -827,8 +831,8 @@ function shortest_hyperpath_kk_ilp(
     metatarget = SimpleHypergraphs.add_vertex!(hg_copy)
     meta_he = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
-        vertices_tail=D(x => convert(T, 0) for x in targets),
-        vertices_head=D(metatarget => convert(T, 0))
+        vertices_tail = D(x => convert(T, 0) for x in targets),
+        vertices_head = D(metatarget => convert(T, 0))
     )
 
     path = shortest_hyperpath_kk_ilp(
@@ -843,11 +847,11 @@ function shortest_hyperpath_kk_ilp(
 end
 
 function shortest_hyperpath_kk_ilp(
-    hg::DirectedHypergraph{T,V,E,D},
-    sources::Set{Int},
-    target::Int,
-    hyperedge_weights::AbstractVector{S}
-) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
+        hg::DirectedHypergraph{T, V, E, D},
+        sources::Set{Int},
+        target::Int,
+        hyperedge_weights::AbstractVector{S}
+    ) where {S <: Real, T <: Real, V, E, D <: AbstractDict{Int, T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -855,8 +859,8 @@ function shortest_hyperpath_kk_ilp(
     metasource = SimpleHypergraphs.add_vertex!(hg_copy)
     meta_he = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
-        vertices_tail=D(metasource => convert(T, 0)),
-        vertices_head=D(x => convert(T, 0) for x in sources)
+        vertices_tail = D(metasource => convert(T, 0)),
+        vertices_head = D(x => convert(T, 0) for x in sources)
     )
 
     path = shortest_hyperpath_kk_ilp(
@@ -867,15 +871,15 @@ function shortest_hyperpath_kk_ilp(
     )
 
     # Remove the fictitious hyperedge from the metasource to the sources
-    setdiff(path, Set{Int}(meta_he))
+    return setdiff(path, Set{Int}(meta_he))
 end
 
 function shortest_hyperpath_kk_ilp(
-    hg::DirectedHypergraph{T,V,E,D},
-    sources::Set{Int},
-    targets::Set{Int},
-    hyperedge_weights::AbstractVector{S}
-) where {S<:Real,T<:Real,V,E,D<:AbstractDict{Int,T}}
+        hg::DirectedHypergraph{T, V, E, D},
+        sources::Set{Int},
+        targets::Set{Int},
+        hyperedge_weights::AbstractVector{S}
+    ) where {S <: Real, T <: Real, V, E, D <: AbstractDict{Int, T}}
     hg_copy = deepcopy(hg)
 
     # Add a single "metasource" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -883,8 +887,8 @@ function shortest_hyperpath_kk_ilp(
     metasource = SimpleHypergraphs.add_vertex!(hg_copy)
     meta_he_source = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
-        vertices_tail=D(metasource => convert(T, 0)),
-        vertices_head=D(x => convert(T, 0) for x in sources)
+        vertices_tail = D(metasource => convert(T, 0)),
+        vertices_head = D(x => convert(T, 0) for x in sources)
     )
 
     # Add a single "metatarget" vertex to reformulate as single-source, single-sink pathfinding problem
@@ -892,8 +896,8 @@ function shortest_hyperpath_kk_ilp(
     metatarget = SimpleHypergraphs.add_vertex!(hg_copy)
     meta_he_target = SimpleHypergraphs.add_hyperedge!(
         hg_copy;
-        vertices_tail=D(x => convert(T, 0) for x in targets),
-        vertices_head=D(metatarget => convert(T, 0))
+        vertices_tail = D(x => convert(T, 0) for x in targets),
+        vertices_head = D(metatarget => convert(T, 0))
     )
 
     path = shortest_hyperpath_kk_ilp(
@@ -904,7 +908,7 @@ function shortest_hyperpath_kk_ilp(
     )
 
     # Remove fictitious hyperedges
-    setdiff(path, Set{Int}([meta_he_source, meta_he_target]))
+    return setdiff(path, Set{Int}([meta_he_source, meta_he_target]))
 end
 
 """
@@ -923,13 +927,13 @@ end
     of the integer linear programming problem `curr_sol`.
 """
 function expand_cuts(
-    hg::H,
-    source::Int,
-    target::Int,
-    cuts::Vector{Set{Int}},
-    crosses::Vector{BitVector},
-    curr_sol::BitVector
-) where {H<:AbstractDirectedHypergraph}
+        hg::H,
+        source::Int,
+        target::Int,
+        cuts::Vector{Set{Int}},
+        crosses::Vector{BitVector},
+        curr_sol::BitVector
+    ) where {H <: AbstractDirectedHypergraph}
     new_cuts = Set{Int}[]
     new_crosses = BitVector[]
 
@@ -944,7 +948,7 @@ function expand_cuts(
                 new_cut = union(new_cut, Set(keys(hg.hg_head.he2v[e])))
                 new_cross = [
                     issubset(Set(keys(hg.hg_tail.he2v[i])), new_cut) && !issubset(Set(keys(hg.hg_head.he2v[i])), new_cut)
-                    for i in 1:nhe(hg)
+                        for i in 1:nhe(hg)
                 ]
             end
         end
@@ -965,16 +969,16 @@ function expand_cuts(
                 # cut so `e` no longer crosses it
                 if curr_sol[e] && new_cross[e]
                     # Greedily pick the vertex in the tail of `e` that causes the fewest hyperedges to newly cross this cut
-                    new_cut_ev = Dict{Int,Set{Int}}()
-                    new_cross_ev = Dict{Int,Vector{Bool}}()
+                    new_cut_ev = Dict{Int, Set{Int}}()
+                    new_cross_ev = Dict{Int, Vector{Bool}}()
                     greedy_v = 0
                     min_length = typemax(Int)
                     for v in keys(hg.hg_tail.he2v[e])
                         new_cut_ev[v] = setdiff(new_cut, Set(v))
                         new_cross_ev[v] = [
                             issubset(Set(keys(hg.hg_tail.he2v[i])), new_cut_ev[v]) &&
-                            !issubset(Set(keys(hg.hg_head.he2v[i])), new_cut_ev[v])
-                            for i in 1:nhe(hg)
+                                !issubset(Set(keys(hg.hg_head.he2v[i])), new_cut_ev[v])
+                                for i in 1:nhe(hg)
                         ]
                         v_length = length(findall(map(!, old_cross) .&& new_cross_ev[v]))
                         if v_length < min_length

@@ -18,15 +18,15 @@ Saves an undirected hypergraph `h` to an output stream `io` in `ehgf` format.
 
 """
 function SimpleHypergraphs.hg_save(io::IO, h::H, format::EHGF_Format; pretty::Bool = false) where {H <: AbstractDirectedHypergraph}
-    
+
     h_size = Base.size(h)
-    
+
     println(io, h_size[1], " ", h_size[2])
     for i in 1:h_size[2]
         tail_keys = sort(collect(keys(h.hg_tail.he2v[i])))
         head_keys = sort(collect(keys(h.hg_head.he2v[i])))
         print(
-            io, 
+            io,
             join(["$k=$(h.hg_tail.he2v[i][k])" for k in tail_keys], ' ')
         )
         print(io, " || ")
@@ -36,6 +36,7 @@ function SimpleHypergraphs.hg_save(io::IO, h::H, format::EHGF_Format; pretty::Bo
         )
         print(io, "\n")
     end
+    return
 end
 
 
@@ -61,33 +62,37 @@ TODO: handling for composite metadata types
 
 """
 function SimpleHypergraphs.hg_save(
-    io::IO,
-    h::DirectedHypergraph{T, V, E, D},
-    format::HIF_Format;
-    pretty::Bool = false
-) where {T, V, E, D}
+        io::IO,
+        h::DirectedHypergraph{T, V, E, D},
+        format::HIF_Format;
+        pretty::Bool = false
+    ) where {T, V, E, D}
     incidences = Vector{OrderedDict{Symbol, Union{Int, String, T}}}()
 
     for i in 1:nhv(h)
-	hes = gethyperedges(h, i)
-	# Tails
-	for j in sort!(collect(keys(hes[1])))
-            push!(incidences, OrderedDict{Symbol, Union{Int, String, T}}(
-		:node => i,
-		:edge => j,
-		:weight => T(h[i, j][1]),
-		:direction => "tail"
-	    ))
+        hes = gethyperedges(h, i)
+        # Tails
+        for j in sort!(collect(keys(hes[1])))
+            push!(
+                incidences, OrderedDict{Symbol, Union{Int, String, T}}(
+                    :node => i,
+                    :edge => j,
+                    :weight => T(h[i, j][1]),
+                    :direction => "tail"
+                )
+            )
         end
 
-	# Heads
-	for j in sort!(collect(keys(hes[2])))
-            push!(incidences, OrderedDict{Symbol, Union{Int, String, T}}(
-		:node => i,
-		:edge => j,
-		:weight => T(h[i, j][2]),
-		:direction => "head"
-	    ))
+        # Heads
+        for j in sort!(collect(keys(hes[2])))
+            push!(
+                incidences, OrderedDict{Symbol, Union{Int, String, T}}(
+                    :node => i,
+                    :edge => j,
+                    :weight => T(h[i, j][2]),
+                    :direction => "head"
+                )
+            )
         end
     end
 
@@ -96,44 +101,46 @@ function SimpleHypergraphs.hg_save(
     #	1. there is at least one metadata entry
     #	2. there is at least one node or edge with no connections (isolated vertex or empty hyperedge)
     node_meta_included = any(x -> !(isnothing(x)), h.v_meta) || any(
-	v -> isempty(h.hg_tail.v2he[v]) && isempty(h.hg_head.v2he[v]
-    ), 1:nhv(h))
-    
+        v -> isempty(h.hg_tail.v2he[v]) && isempty(
+            h.hg_head.v2he[v]
+        ), 1:nhv(h)
+    )
+
     edge_meta_included = (
-	any(x -> !(isnothing(x)), h.he_meta_tail) 
-	|| any(x -> !(isnothing(x)), h.he_meta_head)
-	|| any(e -> isempty(h.hg_tail.he2v[e]) && isempty(h.hg_head.he2v[e]), 1:nhe(h))
+        any(x -> !(isnothing(x)), h.he_meta_tail)
+            || any(x -> !(isnothing(x)), h.he_meta_head)
+            || any(e -> isempty(h.hg_tail.he2v[e]) && isempty(h.hg_head.he2v[e]), 1:nhe(h))
     )
 
     json_node_meta = Vector{OrderedDict{Symbol, Any}}()
     json_edge_meta = Vector{OrderedDict{Symbol, Any}}()
-    
+
     if node_meta_included
         for i in 1:nhv(h)
             node_entry = OrderedDict{
-		Symbol,
-		Union{Int, OrderedDict{Symbol, typeof(h.v_meta[i])}}
-	    }(:node => i)
+                Symbol,
+                Union{Int, OrderedDict{Symbol, typeof(h.v_meta[i])}},
+            }(:node => i)
             if !(isnothing(h.v_meta[i]))
-		node_entry[:attrs] = OrderedDict{Symbol, typeof(h.v_meta[i])}(:value => h.v_meta[i])
+                node_entry[:attrs] = OrderedDict{Symbol, typeof(h.v_meta[i])}(:value => h.v_meta[i])
             end
             push!(json_node_meta, node_entry)
         end
     end
     if edge_meta_included
         for j in 1:nhe(h)
-	    edge_entry = OrderedDict{
-		Symbol, 
-		Union{
-		    Int,
-		    OrderedDict{Symbol, Union{typeof(h.he_meta_tail[j]), typeof(h.he_meta_head[j])}}
-		}
-	    }(:edge => j)
-	    if !(isnothing(h.he_meta_tail[j]) && isnothing(h.he_meta_head[j]))
-		edge_entry[:attrs] = OrderedDict{Symbol, Union{typeof(h.he_meta_tail[j]), typeof(h.he_meta_head[j])}}(
-		    :tail => h.he_meta_tail[j],
-		    :head => h.he_meta_head[j]
-		)
+            edge_entry = OrderedDict{
+                Symbol,
+                Union{
+                    Int,
+                    OrderedDict{Symbol, Union{typeof(h.he_meta_tail[j]), typeof(h.he_meta_head[j])}},
+                },
+            }(:edge => j)
+            if !(isnothing(h.he_meta_tail[j]) && isnothing(h.he_meta_head[j]))
+                edge_entry[:attrs] = OrderedDict{Symbol, Union{typeof(h.he_meta_tail[j]), typeof(h.he_meta_head[j])}}(
+                    :tail => h.he_meta_tail[j],
+                    :head => h.he_meta_head[j]
+                )
             end
             push!(json_edge_meta, edge_entry)
         end
@@ -141,19 +148,19 @@ function SimpleHypergraphs.hg_save(
 
     # Make Dict to be output as JSON
     json_dhg = OrderedDict{
-	Symbol,
-	Union{typeof(incidences), typeof(json_node_meta), typeof(json_edge_meta)}
+        Symbol,
+        Union{typeof(incidences), typeof(json_node_meta), typeof(json_edge_meta)},
     }()
 
     json_dhg[:incidences] = incidences
     if length(json_node_meta) > 0
-	json_dhg[:nodes] = json_node_meta
+        json_dhg[:nodes] = json_node_meta
     end
     if length(json_edge_meta) > 0
-	json_dhg[:edges] = json_edge_meta
+        json_dhg[:edges] = json_edge_meta
     end
-    
-    JSON.json(io, json_dhg; pretty)
+
+    return JSON.json(io, json_dhg; pretty)
 end
 
 
@@ -181,29 +188,30 @@ Skips a single initial comment.
 
 """
 function dhg_load(
-    io::IO,
-    format::EHGF_Format;
-    HType::Type{H} = DirectedHypergraph,
-    T::Type{U} = Bool,
-    D::Type{<:AbstractDict{Int, U}} = Dict{Int, T},
-) where {U <: Real, H <: AbstractDirectedHypergraph}
+        io::IO,
+        format::EHGF_Format;
+        HType::Type{H} = DirectedHypergraph,
+        T::Type{U} = Bool,
+        D::Type{<:AbstractDict{Int, U}} = Dict{Int, T},
+    ) where {U <: Real, H <: AbstractDirectedHypergraph}
     line = readline(io)
 
     if startswith(line, "\"\"\"")
-      singleline = true
-        while(
-            !( (!singleline && endswith(line, "\"\"\"")) ||
-            (singleline && endswith(line, "\"\"\"") && length(line)>5)
-            ) &&
-            !eof(io)
+        singleline = true
+        while (
+                !(
+                    (!singleline && endswith(line, "\"\"\"")) ||
+                        (singleline && endswith(line, "\"\"\"") && length(line) > 5)
+                ) &&
+                    !eof(io)
             )
-                line = readline(io)
-                singleline = false
+            line = readline(io)
+            singleline = false
         end
         if eof(io)
             throw(ArgumentError("malformed input"))
         end
-       line = readline(io)
+        line = readline(io)
     end
 
     l = split(strip(line))
@@ -218,7 +226,7 @@ function dhg_load(
         length(ht) == 2 || throw(ArgumentError("Expected one head and one tail!"))
 
         he_tail, he_head = ht
-        
+
         for pos in split.(strip.(he_tail))
             entry = split(pos, '=')
             length(entry) == 2 || throw(ArgumentError("Expected format: vertex=weight"))
@@ -252,7 +260,7 @@ function dhg_load(
 
     end
     # we ignore lines beyond k+1 in the file
-    h
+    return h
 end
 
 
@@ -278,13 +286,13 @@ their respective indices in the hypergraph.
 
 """
 function _add_weights_from_incidences!(
-    data::Dict{Symbol, Any}, 
-    hg::AbstractDirectedHypergraph{Tuple{Union{T,Nothing},Union{T,Nothing}}}, 
-    edges::DataFrame,
-    nodes::DataFrame
-) where {T <: Real}
+        data::Dict{Symbol, Any},
+        hg::AbstractDirectedHypergraph{Tuple{Union{T, Nothing}, Union{T, Nothing}}},
+        edges::DataFrame,
+        nodes::DataFrame
+    ) where {T <: Real}
     node_dict = Dict{Union{String, Int}, Int}(id => idx for (id, idx) in zip(nodes.id, 1:nrow(nodes)))
-    edge_dict = Dict{Union{String, Int}, Int}(id => idx for (id, idx) in zip(edges.id, 1:nrow(edges))) 
+    edge_dict = Dict{Union{String, Int}, Int}(id => idx for (id, idx) in zip(edges.id, 1:nrow(edges)))
 
     incidences = data[:incidences]
 
@@ -292,15 +300,16 @@ function _add_weights_from_incidences!(
         node_idx = node_dict[incidence[:node]]
         edge_idx = edge_dict[incidence[:edge]]
         weight = get(incidence, :weight, one(T))
-	direction = get(incidence, :direction, "none")
+        direction = get(incidence, :direction, "none")
 
-	if direction == "none"
-	    @warn "No direction given for hyperedge incidence. Ignoring; cannot include weight."
-	else
-	    side = direction == "tail" ? 1 : 2
-	    hg[side, node_idx, edge_idx] = T(weight)
-	end
+        if direction == "none"
+            @warn "No direction given for hyperedge incidence. Ignoring; cannot include weight."
+        else
+            side = direction == "tail" ? 1 : 2
+            hg[side, node_idx, edge_idx] = T(weight)
+        end
     end
+    return
 end
 
 """
@@ -329,42 +338,42 @@ Constructs vertex or directed hyperedge `DataFrame` objects based on attributes 
 
 """
 function _build_attr_dataframe(
-    data::Dict{Symbol, Any},
-    field::Symbol,
-    V::Union{Type, Symbol},
-    add_original_id_to_meta::Union{Symbol, Nothing},
-    to_convert::Union{Nothing, Symbol, AbstractVector{Symbol}}
-)
+        data::Dict{Symbol, Any},
+        field::Symbol,
+        V::Union{Type, Symbol},
+        add_original_id_to_meta::Union{Symbol, Nothing},
+        to_convert::Union{Nothing, Symbol, AbstractVector{Symbol}}
+    )
     @assert field ∈ (:nodes, :edges)
-    fid = Symbol(string(field)[1:end-1])  # :node or :edge
+    fid = Symbol(string(field)[1:(end - 1)])  # :node or :edge
 
     # Make list of symbols to type-convert
     if isnothing(to_convert)
-	to_convert = Symbol[]
+        to_convert = Symbol[]
     elseif isa(to_convert, Symbol)
-	to_convert = [to_convert]
-    end
-    
-    target_attr_type = Any 
-    dict_type = Dict{Symbol, Any}
-    if V != :auto
-	if isnothing(add_original_id_to_meta) && length(to_convert) <= 1
-            target_attr_type = V
-	elseif isnothing(add_original_id_to_meta) && length(to_convert) > 1
-	    # Vertex/dihyperedge attributes will (at least initially) be dict if the input type is 
-	    # a dict in need of conversion to the type `V`
-	    target_attr_type = Dict{Symbol, V}
-	    dict_type = target_attr_type
-        else
-	    # Including ID type
-	    target_attr_type = Dict{Symbol, Union{V, Int, String}}
-	    dict_type = target_attr_type
-	end
+        to_convert = [to_convert]
     end
 
-    items = DataFrame(; 
-        id=Union{String, Int}[], 
-        attrs=target_attr_type[]
+    target_attr_type = Any
+    dict_type = Dict{Symbol, Any}
+    if V != :auto
+        if isnothing(add_original_id_to_meta) && length(to_convert) <= 1
+            target_attr_type = V
+        elseif isnothing(add_original_id_to_meta) && length(to_convert) > 1
+            # Vertex/dihyperedge attributes will (at least initially) be dict if the input type is
+            # a dict in need of conversion to the type `V`
+            target_attr_type = Dict{Symbol, V}
+            dict_type = target_attr_type
+        else
+            # Including ID type
+            target_attr_type = Dict{Symbol, Union{V, Int, String}}
+            dict_type = target_attr_type
+        end
+    end
+
+    items = DataFrame(;
+        id = Union{String, Int}[],
+        attrs = target_attr_type[]
     )
     if !haskey(data, field)
         return items
@@ -378,51 +387,51 @@ function _build_attr_dataframe(
         end
         val = get(item, :attrs, nothing)
 
-	# Symbol-value pairs
-	# This works if val is a single metadata value or (if using `hg_save`) a dictionary
-	kvs = Tuple{Symbol, Any}[]
-	if length(to_convert) == 0
-	    push!(kvs, (:only, val))
-	else
-	    for tc in to_convert
-		push!(kvs, (tc, get(val, tc, nothing)))
-	    end
-	end
+        # Symbol-value pairs
+        # This works if val is a single metadata value or (if using `hg_save`) a dictionary
+        kvs = Tuple{Symbol, Any}[]
+        if length(to_convert) == 0
+            push!(kvs, (:only, val))
+        else
+            for tc in to_convert
+                push!(kvs, (tc, get(val, tc, nothing)))
+            end
+        end
 
-	# Gather up everything that's going to be a metadata "value" for this vertex/dihyperedge
-	for_attrs = Tuple{Symbol, Any}[]
-	for (k, v) in kvs
-	    if isnothing(v)
-		continue
-	    end
+        # Gather up everything that's going to be a metadata "value" for this vertex/dihyperedge
+        for_attrs = Tuple{Symbol, Any}[]
+        for (k, v) in kvs
+            if isnothing(v)
+                continue
+            end
 
-	    if V == String && !(isa(v, String))
-		push!(for_attrs, (k, JSON.json(v)))
-	    elseif V != :auto
-		push!(for_attrs, (k, convert(V, v)))
-	    else
-		push!(for_attrs, (k, v))
-	    end
-	end
+            if V == String && !(isa(v, String))
+                push!(for_attrs, (k, JSON.json(v)))
+            elseif V != :auto
+                push!(for_attrs, (k, convert(V, v)))
+            else
+                push!(for_attrs, (k, v))
+            end
+        end
 
-	if !isnothing(add_original_id_to_meta)
-	    push!(for_attrs, (add_original_id_to_meta, id))
-	end
-	    
-	if length(for_attrs) == 1 && for_attrs[1][1] in [:only, :value]
-	    val = for_attrs[1][2]
-	else
-	    val = dict_type()
-	    for (k, v) in for_attrs
-		val[k] = v
-	    end
-	end
+        if !isnothing(add_original_id_to_meta)
+            push!(for_attrs, (add_original_id_to_meta, id))
+        end
+
+        if length(for_attrs) == 1 && for_attrs[1][1] in [:only, :value]
+            val = for_attrs[1][2]
+        else
+            val = dict_type()
+            for (k, v) in for_attrs
+                val[k] = v
+            end
+        end
 
         push!(items, [id, val])
         push!(seen, id)
     end
 
-    items
+    return items
 end
 
 """
@@ -444,39 +453,39 @@ Maybe we reassess if having split tail and head metadata is a good idea?
 function _separate_tail_head_meta(data::Vector{X}) where {X}
     # Simplest case - "tail" and "head" as separate columns
     if X <: AbstractDict
-	if !(all(x -> (:tail in keys(x) && :head in keys(x)), data))
-	    # No clearly marked tail and head data
-	    return (data, data)
-	else
+        if !(all(x -> (:tail in keys(x) && :head in keys(x)), data))
+            # No clearly marked tail and head data
+            return (data, data)
+        else
 
-	    t = X[]
-	    h = X[]
+            t = X[]
+            h = X[]
 
-	    for d in data
-		thist = X()
-		thish = X()
+            for d in data
+                thist = X()
+                thish = X()
 
-		for (k, v) in d
-		    if k != :tail
-			thish[k] = v
-		    end
-		    if k != :head
-			thist[k] = v
-		    end
-		end
-		push!(t, thist)
-		push!(h, thish)
-	    end
+                for (k, v) in d
+                    if k != :tail
+                        thish[k] = v
+                    end
+                    if k != :head
+                        thist[k] = v
+                    end
+                end
+                push!(t, thist)
+                push!(h, thish)
+            end
 
-	    return (t, h)
-	end
+            return (t, h)
+        end
     elseif X <: NTuple{2, Any}
-	# If each edge has two values, assume these are the tail and head metadata
-	return ([e[1] for e in data], [e[2] for e in data])
+        # If each edge has two values, assume these are the tail and head metadata
+        return ([e[1] for e in data], [e[2] for e in data])
     else
-	# If there aren't multiple keys, then assume that data is overall tail and head metadata
-	# Cannot separate
-	return (data, data)
+        # If there aren't multiple keys, then assume that data is overall tail and head metadata
+        # Cannot separate
+        return (data, data)
     end
 end
 
@@ -529,19 +538,19 @@ in the metadata dictionary.
 
 """
 function dhg_load(
-    io::IO,
-    format::HIF_Format;
-    HType::Type{H} = DirectedHypergraph,
-    T::Type{U} = Bool,
-    D::Type{<:AbstractDict{Int, U}} = Dict{Int, T},
-    V::Union{Type, Symbol} = :auto,
-    E::Union{Type, Symbol} = :auto,
-    sort_by_id::Bool = false,
-    add_original_id_to_meta::Union{Symbol, Nothing} = nothing,
-    show_warning::Bool = true,
-    to_convert::Union{Nothing, Symbol, AbstractVector{Symbol}}=:auto
-) where {H <: AbstractDirectedHypergraph, U <: Real}
-    data = JSON.parse(io; dicttype=Dict{Symbol, Any})
+        io::IO,
+        format::HIF_Format;
+        HType::Type{H} = DirectedHypergraph,
+        T::Type{U} = Bool,
+        D::Type{<:AbstractDict{Int, U}} = Dict{Int, T},
+        V::Union{Type, Symbol} = :auto,
+        E::Union{Type, Symbol} = :auto,
+        sort_by_id::Bool = false,
+        add_original_id_to_meta::Union{Symbol, Nothing} = nothing,
+        show_warning::Bool = true,
+        to_convert::Union{Nothing, Symbol, AbstractVector{Symbol}} = :auto
+    ) where {H <: AbstractDirectedHypergraph, U <: Real}
+    data = JSON.parse(io; dicttype = Dict{Symbol, Any})
 
     # Basic, minimal validation
     # "incidences" is the only required key in the HIF standard
@@ -550,8 +559,8 @@ function dhg_load(
     if isempty(data[:incidences])
         if isempty(get(data, :edges, [])) && isempty(get(data, :nodes, []))
             return HType{
-                T, 
-                V == :auto ? Nothing : V, 
+                T,
+                V == :auto ? Nothing : V,
                 E == :auto ? Nothing : E,
                 D,
             }(0, 0)
@@ -559,21 +568,21 @@ function dhg_load(
     end
 
     nodesdf = _build_attr_dataframe(
-	data,
-	:nodes,
-	V,
-	add_original_id_to_meta,
-	(to_convert==:auto ? :value : to_convert)
+        data,
+        :nodes,
+        V,
+        add_original_id_to_meta,
+        (to_convert == :auto ? :value : to_convert)
     )
     edgesdf = _build_attr_dataframe(
-	data,
-	:edges,
-	E,
-	add_original_id_to_meta,
-	(to_convert==:auto ? [:tail, :head] : to_convert)
+        data,
+        :edges,
+        E,
+        add_original_id_to_meta,
+        (to_convert == :auto ? [:tail, :head] : to_convert)
     )
 
-    attr_nodes_N = nrow(nodesdf)  
+    attr_nodes_N = nrow(nodesdf)
     attr_edges_N = nrow(edgesdf)
     if attr_nodes_N == 0 && isnothing(add_original_id_to_meta)
         # no node attributes found so all attrs set to Nothing
@@ -623,12 +632,12 @@ function dhg_load(
     tail_meta, head_meta = _separate_tail_head_meta(edgesdf.attrs)
 
     hg = HType{T, eltype(nodesdf.attrs), eltype(tail_meta), D}(
-	    nrow(nodesdf), nrow(edgesdf), nodesdf.attrs, tail_meta, head_meta 
-         )
+        nrow(nodesdf), nrow(edgesdf), nodesdf.attrs, tail_meta, head_meta
+    )
 
     _add_weights_from_incidences!(data, hg, edgesdf, nodesdf)
 
-    hg
+    return hg
 end
 
 
@@ -667,14 +676,14 @@ function dhg_load(
         E = Nothing
     ) where {U <: Real, H <: AbstractDirectedHypergraph}
 
-    if format == EHGF_Format()
+    return if format == EHGF_Format()
         if HType == DirectedHypergraph
-            open(io -> dhg_load(io, format; HType=HType, T=T, D=D), fname, "r")
+            open(io -> dhg_load(io, format; HType = HType, T = T, D = D), fname, "r")
         else
             error("EHGF loading only implemented for DirectedHypergraph")
         end
     else
-        open(io -> dhg_load(io, format; HType=HType, T=T, D=D, V=V, E=E), fname, "r")
+        open(io -> dhg_load(io, format; HType = HType, T = T, D = D, V = V, E = E), fname, "r")
     end
 
 end

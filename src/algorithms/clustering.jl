@@ -4,45 +4,45 @@ function _num_quads(hg::H, i::Int) where {H <: AbstractDirectedHypergraph}
     quads = 0
 
     nv = nhv(hg)
-    
+
     rel_hes = sort!(collect(union(keys(hg.hg_tail.v2he[i]), keys(hg.hg_head.v2he[i]))))
 
     for α in 1:length(rel_hes)
-	a = rel_hes[α]
-	for β in α+1:length(rel_hes)
-	    b = rel_hes[β]
+        a = rel_hes[α]
+        for β in (α + 1):length(rel_hes)
+            b = rel_hes[β]
 
             for j in 1:nv
                 if i == j
                     continue
                 end
 
-		if !(
-		    (isnothing(hg[j, a][1]) && isnothing(hg[j, a][2]))
-		    || (isnothing(hg[j, b][1]) && isnothing(hg[j, b][2]))
-		)
-		    quads += 1
-		end
-	    end
+                if !(
+                        (isnothing(hg[j, a][1]) && isnothing(hg[j, a][2]))
+                            || (isnothing(hg[j, b][1]) && isnothing(hg[j, b][2]))
+                    )
+                    quads += 1
+                end
+            end
         end
     end
-    
-    quads
+
+    return quads
 
 end
 
 function _max_num_quads(
-    hg::H,
-    i::Int,
-    tail_deg_exc::AbstractVector{Int},
-    head_deg_exc::AbstractVector{Int}
-) where {H <: AbstractDirectedHypergraph}
+        hg::H,
+        i::Int,
+        tail_deg_exc::AbstractVector{Int},
+        head_deg_exc::AbstractVector{Int}
+    ) where {H <: AbstractDirectedHypergraph}
     ne = nhe(hg)
 
     # TODO: there must be a better implementation
     qmax = 0
     for α in 1:ne
-        for β in α+1:ne
+        for β in (α + 1):ne
             inc_ab = (_inc(hg, i, α, 1) + _inc(hg, i, α, 2)) * (_inc(hg, i, β, 1) + _inc(hg, i, β, 2))
 
             if inc_ab == 0
@@ -98,15 +98,15 @@ function _max_num_quads(
                 degs_sorted = sort(degs)
 
                 if max(degs[1], degs[3]) < min(degs[2], degs[4]) || min(degs[1], degs[3]) > max(degs[2], degs[4])
-                    W = 2 * degs_sorted[1] +  2 * degs_sorted[2]
+                    W = 2 * degs_sorted[1] + 2 * degs_sorted[2]
                 else
-                    W =  2 * degs_sorted[1] + degs_sorted[2] + degs_sorted[3]
+                    W = 2 * degs_sorted[1] + degs_sorted[2] + degs_sorted[3]
                 end
             end
             qmax += inc_ab * W
         end
     end
-    qmax
+    return qmax
 end
 
 """
@@ -129,13 +129,13 @@ function SimpleHypergraphs.quad_clustering_coefficient(hg::H, i::Int) where {H <
         tail_deg_exc[he] = length([k for k in keys(hg.hg_tail.he2v[he]) if k != i])
         head_deg_exc[he] = length([k for k in keys(hg.hg_head.he2v[he]) if k != i])
     end
-    
+
     # Can this vertex participate in any quads, based on its connectivity?
     degree_thresh = 0
     for he in union(Set(keys(hg.hg_tail.v2he[i])), Set(keys(hg.hg_head.v2he[i])))
         degree_thresh += tail_deg_exc[he] + head_deg_exc[he]
     end
-    
+
     if degree_thresh < 2
         return 0.0
     end
