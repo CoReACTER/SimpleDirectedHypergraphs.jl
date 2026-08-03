@@ -1,0 +1,57 @@
+{
+  "incidences": [
+    {
+      "node": 1,
+      "edge": 1,
+      "weight": 1
+    },
+    {
+      "node": 2,
+      "edge": 1,
+      "weight": 2,
+      "direction": "tail"
+    },
+    {
+      "node": 2,
+      "edge": 2,
+      "weight": 3,
+      "direction": "tail"
+    },
+    {
+      "node": 3,
+      "edge": 2,
+      "weight": 0,
+      "direction": "head"
+    },
+    {
+      "node": 4,
+      "edge": 3,
+      "weight": 1,
+      "direction": "tail"
+    },
+    {
+      "node": 4,
+      "edge": 1,
+      "weight": 4,
+      "direction": "head"
+    },
+    {
+      "node": 5,
+      "edge": 2,
+      "weight": 12,
+      "direction": "tail"
+    },
+    {
+      "node": 5,
+      "edge": 1,
+      "weight": 5,
+      "direction": "head"
+    },
+    {
+      "node": 6,
+      "edge": 3,
+      "weight": 4,
+      "direction": "head"
+    }
+  ]
+}

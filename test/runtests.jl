@@ -206,7 +206,6 @@ end;
     # Saving and loading from EHGF and HIF
     h = dhg_load("data/test_dhg.ehgf"; format=EHGF_Format(), T=Int, HType=DirectedHypergraph)
     mktemp("data") do path, _
-        println(path)
         SimpleHypergraphs.hg_save(path, h; format=EHGF_Format())
 
         loaded_hg = replace(read(path, String), r"\n*$" => "")
@@ -251,11 +250,56 @@ end;
 
         @test get_vertex_meta(dh1, 1) == get_vertex_meta(loaded_hg, 1)
 	@test get_hyperedge_meta(loaded_hg, 2) == (Dict(:tail => "2"), Dict(:head => "2"))
+
+	# Saving to HIF without metadata
+	nometa_wiso = DirectedHypergraph(
+	    [
+		true	nothing	nothing
+		nothing	nothing	nothing
+		nothing	nothing	true
+	    ],
+	    [
+		nothing	nothing	true
+		nothing	nothing	nothing
+		true	nothing	nothing
+	    ]
+	)
+	SimpleHypergraphs.hg_save(path, nometa_wiso; format=HIF_Format())
+
+	# Because there are isolated vertices and empty edges, "metadata" should be stored
+	data = open(io -> JSON.parse(io; dicttype=Dict{Symbol, Any}), path)
+	@test haskey(data, :nodes)
+	@test haskey(data, :edges)
     end
 
     # Failed loading from EHGF
-    @test_throws ArgumentError dhg_load("data/malformedcomment.ehgf"; format=EHGF_Format(), HType=DirectedHypergraph, T=Int)
-    @test_throws ArgumentError dhg_load("data/argumenterror.ehgf"; format=EHGF_Format(), HType=DirectedHypergraph, T=Int)
+    @test_throws ArgumentError dhg_load(
+					"data/malformedcomment.ehgf";
+					format=EHGF_Format(),
+					HType=DirectedHypergraph,
+					T=Int
+				)
+    @test_throws ArgumentError dhg_load(
+					"data/argumenterror.ehgf";
+					format=EHGF_Format(),
+					HType=DirectedHypergraph,
+					T=Int
+				)
+    @test_throws ArgumentError dhg_load(
+					"data/wrong_order.ehgf";
+					format=EHGF_Format(),
+					HType=DirectedHypergraph,
+					T=Int
+				)
+
+    # HIF: missing direction
+    @test_logs (
+		:warn,
+		"No direction given for hyperedge incidence. Ignoring; cannot include weight."
+		) dhg_load("data/no_direction.hif"; format=HIF_Format(), HType=DirectedHypergraph, T=Int)
+    no_direction = dhg_load("data/no_direction.hif"; format=HIF_Format(), HType=DirectedHypergraph, T=Int)
+    @test isnothing(no_direction[1,1][1])
+
 
 end;
 
