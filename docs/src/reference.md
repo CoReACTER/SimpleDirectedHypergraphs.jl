@@ -109,6 +109,18 @@ SimpleHypergraphs.random_walk(::H, ::Int; ::Function, ::Function, ::Bool) where 
 SimpleHypergraphs.dual(h::DirectedHypergraph)
 ```
 
+Special Classes
+---------------
+```@docs
+is_b_hypergraph
+is_f_hypergraph
+is_bf_hypergraph
+is_loopless
+is_simple
+is_connected
+is_strongly_connected
+```
+
 Modifying a directed hypergraph
 -------------------------------
 ```@docs

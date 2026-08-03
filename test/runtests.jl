@@ -7,8 +7,12 @@ using Graphs
 import JuMP
 using Test
 # using JET
+using JSON
+using JSONSchema
+using HTTP
 
-dh1 = DirectedHypergraph{Float64,Int,String}(7, 6)
+
+dh1 = DirectedHypergraph{Float64, Int, String}(7, 6)
 dh1[1, 1, 1] = 1.0
 dh1.hg_head[2:3, 1] .= 2.5  # Assignment on a directed hypergraph directly with slices is currently awkward
 dh1[1, 3, 3] = 4.0
@@ -42,7 +46,8 @@ dh2 = DirectedHypergraph(tail_2, head_2)
 
 
 @testset "SimpleDirectedHypergraphs DirectedHypergraph     " begin
-    h = dhg_load("data/test_dhg.ehgf"; format=EHGF_Format(), T=Int, HType=DirectedHypergraph)
+    # Size and matrix conversion
+    h = dhg_load("data/test_dhg.ehgf"; format = EHGF_Format(), T = Int, HType = DirectedHypergraph)
     @test size(h) == (6, 3)
     @test nhv(h) == 6
     @test nhe(h) == 3
@@ -56,75 +61,27 @@ dh2 = DirectedHypergraph(tail_2, head_2)
         (nothing, 5) (12, nothing) (nothing, nothing)
         (nothing, nothing) (nothing, nothing) (nothing, 4)
     ]
-    mktemp("data") do path, _
-        println(path)
-        SimpleHypergraphs.hg_save(path, h; format=EHGF_Format())
 
-        loaded_hg = replace(read(path, String), r"\n*$" => "")
-
-        @test loaded_hg ==
-              reduce(replace,
-            ["\r\n" => "\n",
-                r"^\"\"\"(?s).*\"\"\"\n" => "", #remove initial comments
-                r"\n*$" => ""], #remove final \n*
-            init=read("data/test_dhg.ehgf", String)) #no comments
-
-        @test loaded_hg ==
-              reduce(replace,
-            ["\r\n" => "\n",
-                r"^\"\"\"(?s).*\"\"\"\n" => "", #remove initial comments
-                r"\n*$" => ""], #remove final \n*
-            init=read("data/singlelinecomment.ehgf", String)) #single line comment
-
-        @test loaded_hg ==
-              reduce(replace,
-            ["\r\n" => "\n",
-                r"^\"\"\"(?s).*\"\"\"\n" => "", #remove initial comments
-                r"\n*$" => ""], #remove final \n*
-            init=read("data/multilinecomment.ehgf", String)) #multiple lines comment
-
-        for v = 1:nhv(dh1)
-            set_vertex_meta!(dh1, v, v)
-        end
-
-        for he = 1:nhe(dh1)
-            set_hyperedge_meta!(dh1, string(he), string(he), he)
-        end
-
-        SimpleHypergraphs.hg_save(path, dh1; format=JSON_Format())
-        loaded_hg = dhg_load(path; format=JSON_Format(), HType=DirectedHypergraph, T=Float64, V=Int, E=String)
-
-        @test dh1 == loaded_hg
-        @test dh1.v_meta == loaded_hg.v_meta
-        @test dh1.he_meta_tail == loaded_hg.he_meta_tail
-        @test dh1.he_meta_head == loaded_hg.he_meta_head
-
-        @test get_vertex_meta(dh1, 1) == get_vertex_meta(loaded_hg, 1)
-        @test get_hyperedge_meta(dh1, 2) == get_hyperedge_meta(loaded_hg, 2)
-
-    end
-
-    @test_throws ArgumentError dhg_load("data/malformedcomment.ehgf"; format=EHGF_Format(), HType=DirectedHypergraph, T=Int)
-    @test_throws ArgumentError dhg_load("data/argumenterror.ehgf"; format=EHGF_Format(), HType=DirectedHypergraph, T=Int)
-
+    # Empty dihypergraph
     dh2 = DirectedHypergraph{Float64}(0, 0)
-    @test dh2 == DirectedHypergraph{Float64,Nothing}(0, 0)
-    @test dh2 == DirectedHypergraph{Float64,Nothing,Nothing}(0, 0)
-    @test dh2 == DirectedHypergraph{Float64,Nothing,Nothing,Dict{Int,Float64}}(0, 0)
+    @test dh2 == DirectedHypergraph{Float64, Nothing}(0, 0)
+    @test dh2 == DirectedHypergraph{Float64, Nothing, Nothing}(0, 0)
+    @test dh2 == DirectedHypergraph{Float64, Nothing, Nothing, Dict{Int, Float64}}(0, 0)
 
     dh3 = DirectedHypergraph(0, 0)
-    @test dh3 == DirectedHypergraph{Bool,Nothing,Nothing,Dict{Int,Bool}}(0, 0)
+    @test dh3 == DirectedHypergraph{Bool, Nothing, Nothing, Dict{Int, Bool}}(0, 0)
 
+    # Populating
     for i in 1:6
         SimpleHypergraphs.add_vertex!(dh2)
     end
-    SimpleHypergraphs.add_hyperedge!(dh2; vertices_tail=Dict(1 => 1.0), vertices_head=Dict(2:3 .=> 2.5))
+    SimpleHypergraphs.add_hyperedge!(dh2; vertices_tail = Dict(1 => 1.0), vertices_head = Dict(2:3 .=> 2.5))
     SimpleHypergraphs.add_hyperedge!(dh2)
-    SimpleHypergraphs.add_hyperedge!(dh2; vertices_tail=Dict(3 => 4.0), vertices_head=Dict(4 => 5.5))
-    SimpleHypergraphs.add_hyperedge!(dh2; vertices_tail=Dict(5 => 7.0), vertices_head=Dict(6 => 8.5))
-    SimpleHypergraphs.add_hyperedge!(dh2; vertices_tail=Dict(6 => 10.0))
-    SimpleHypergraphs.add_hyperedge!(dh2; vertices_head=Dict(5 => 1.5))
-    SimpleHypergraphs.add_vertex!(dh2; hyperedges_tail=Dict(6 => 0.0), hyperedges_head=Dict(5 => -1.5))
+    SimpleHypergraphs.add_hyperedge!(dh2; vertices_tail = Dict(3 => 4.0), vertices_head = Dict(4 => 5.5))
+    SimpleHypergraphs.add_hyperedge!(dh2; vertices_tail = Dict(5 => 7.0), vertices_head = Dict(6 => 8.5))
+    SimpleHypergraphs.add_hyperedge!(dh2; vertices_tail = Dict(6 => 10.0))
+    SimpleHypergraphs.add_hyperedge!(dh2; vertices_head = Dict(5 => 1.5))
+    SimpleHypergraphs.add_vertex!(dh2; hyperedges_tail = Dict(6 => 0.0), hyperedges_head = Dict(5 => -1.5))
     @test dh1 == dh2
     mtail = Matrix(dh1.hg_tail)
     mhead = Matrix(dh1.hg_head)
@@ -132,41 +89,46 @@ dh2 = DirectedHypergraph(tail_2, head_2)
     @test mhead == Matrix(dh2.hg_head)
     @test dh1 == DirectedHypergraph(mtail, mhead)
     @test dh1 == DirectedHypergraph{Float64}(mtail, mhead)
-    @test dh1 == DirectedHypergraph{Float64,Nothing}(mtail, mhead)
-    @test dh1 == DirectedHypergraph{Float64,Nothing,Nothing}(mtail, mhead)
-    @test dh1 == DirectedHypergraph{Float64,Nothing,Nothing,Dict{Int,Float64}}(mtail, mhead)
-    @test all(Matrix(dh1.hg_tail) .== Matrix(
-        DirectedHypergraph{Float64,Nothing,Nothing,SortedDict{Int,Float64}}(mtail, mhead).hg_tail)
+    @test dh1 == DirectedHypergraph{Float64, Nothing}(mtail, mhead)
+    @test dh1 == DirectedHypergraph{Float64, Nothing, Nothing}(mtail, mhead)
+    @test dh1 == DirectedHypergraph{Float64, Nothing, Nothing, Dict{Int, Float64}}(mtail, mhead)
+    @test all(
+        Matrix(dh1.hg_tail) .== Matrix(
+            DirectedHypergraph{Float64, Nothing, Nothing, SortedDict{Int, Float64}}(mtail, mhead).hg_tail
+        )
     )
-    @test all(Matrix(dh1.hg_head) .== Matrix(
-        DirectedHypergraph{Float64,Nothing,Nothing,SortedDict{Int,Float64}}(mtail, mhead).hg_head)
+    @test all(
+        Matrix(dh1.hg_head) .== Matrix(
+            DirectedHypergraph{Float64, Nothing, Nothing, SortedDict{Int, Float64}}(mtail, mhead).hg_head
+        )
     )
     @test getindex(dh1, 5, 4) == (7.0, nothing)
 
-    dh4 = DirectedHypergraph{Float64,String,Nothing}(1, 1)
-    @test SimpleHypergraphs.add_vertex!(dh4; v_meta="test") == 2
+    # Setting and getting
+    dh4 = DirectedHypergraph{Float64, String, Nothing}(1, 1)
+    @test SimpleHypergraphs.add_vertex!(dh4; v_meta = "test") == 2
     @test SimpleHypergraphs.set_vertex_meta!(dh4, "t", 1) == ["t", "test"]
     @test SimpleHypergraphs.get_vertex_meta(dh4, 2) == "test"
     @test get_hyperedge_meta(dh4, 1) == (nothing, nothing)
     @test_throws BoundsError get_hyperedge_meta(dh4, 2)
 
-    dh5 = DirectedHypergraph{Float64,Nothing,String}(1, 1)
-    @test SimpleHypergraphs.add_hyperedge!(dh5; he_meta_tail="test") == 2
+    dh5 = DirectedHypergraph{Float64, Nothing, String}(1, 1)
+    @test SimpleHypergraphs.add_hyperedge!(dh5; he_meta_tail = "test") == 2
     @test SimpleHypergraphs.set_hyperedge_meta!(dh5, "t", "h", 1) == (["t", "test"], ["h", nothing])
     @test get_hyperedge_meta(dh5, 2) == ("test", nothing)
     @test get_vertex_meta(dh5, 1) === nothing
     @test_throws BoundsError get_vertex_meta(dh5, 2)
 
-    dh6 = DirectedHypergraph{Float64,String,String,SortedDict{Int,Float64}}(1, 1)
-    @test typeof(dh6.hg_tail.v2he[1]) <: AbstractDict{Int,Float64}
-    @test typeof(dh6.hg_head.v2he[1]) <: AbstractDict{Int,Float64}
-    @test typeof(dh6.hg_tail.he2v[1]) <: AbstractDict{Int,Float64}
-    @test typeof(dh6.hg_head.he2v[1]) <: AbstractDict{Int,Float64}
-    @test SimpleHypergraphs.add_vertex!(dh6; v_meta="test") == 2
+    dh6 = DirectedHypergraph{Float64, String, String, SortedDict{Int, Float64}}(1, 1)
+    @test typeof(dh6.hg_tail.v2he[1]) <: AbstractDict{Int, Float64}
+    @test typeof(dh6.hg_head.v2he[1]) <: AbstractDict{Int, Float64}
+    @test typeof(dh6.hg_tail.he2v[1]) <: AbstractDict{Int, Float64}
+    @test typeof(dh6.hg_head.he2v[1]) <: AbstractDict{Int, Float64}
+    @test SimpleHypergraphs.add_vertex!(dh6; v_meta = "test") == 2
     @test SimpleHypergraphs.set_vertex_meta!(dh6, "t", 1) == ["t", "test"]
     @test get_vertex_meta(dh6, 2) == "test"
     @test get_hyperedge_meta(dh6, 1) == (nothing, nothing)
-    @test SimpleHypergraphs.add_hyperedge!(dh6; he_meta_tail="test") == 2
+    @test SimpleHypergraphs.add_hyperedge!(dh6; he_meta_tail = "test") == 2
     @test SimpleHypergraphs.set_hyperedge_meta!(dh6, "t", "h", 1) == (["t", "test"], ["h", nothing])
     @test get_hyperedge_meta(dh6, 2) == ("test", nothing)
     @test_throws BoundsError get_vertex_meta(dh6, 3)
@@ -183,6 +145,7 @@ dh2 = DirectedHypergraph(tail_2, head_2)
     @test dh1_0[1, 1] == (nothing, nothing)
     @test_throws BoundsError setindex!(dh1_0, nothing, 10, 9)
 
+    # Removing and pruning
     dh1_1 = DirectedHypergraph(
         [
             1 nothing nothing
@@ -205,92 +168,241 @@ dh2 = DirectedHypergraph(tail_2, head_2)
     SimpleHypergraphs.prune_hypergraph!(dh1_1)
     @test size(dh1_1)[1] == 2
     @test size(dh1_1)[2] == 2
+
+    # Construction tests focusing on metadata
+    thg = Hypergraph{Bool, Int, Char}(
+        tail_2;
+        v_meta = Vector{Union{Nothing, Int}}(collect(1:5)),
+        he_meta = Vector{Union{Nothing, Char}}(collect('a':'i'))
+    )
+    hhg = Hypergraph{Bool, Int, Char}(
+        head_2;
+        v_meta = Vector{Union{Nothing, Int}}(collect(1:5)),
+        he_meta = Vector{Union{Nothing, Char}}(collect('A':'I'))
+    )
+    dhg_th = DirectedHypergraph{Bool, Int, Char}(thg, hhg)
+    @test dhg_th.v_meta == thg.v_meta
+    @test dhg_th.he_meta_tail == thg.he_meta
+    @test dhg_th.he_meta_head == hhg.he_meta
+
+    hhg_2 = Hypergraph{Bool, Int, Char}(
+        head_2;
+        v_meta = Vector{Union{Nothing, Int}}(collect(6:10)),
+        he_meta = Vector{Union{Nothing, Char}}(collect('A':'I'))
+    )
+    dhg_th2 = DirectedHypergraph{Bool, Int, Char}(thg, hhg_2)
+    @test dhg_th2.v_meta == fill(nothing, 5)
+
+    # Setting and getting
+    dhg_th[1, 1, 1] = false
+    @test !dhg_th[1, 1][1]
+    dhg_th[2, 3, 2] = true
+    @test dhg_th[3, 2][2]
+
+    # Remove vertex
+    remove_vertex!(dhg_th, 1)
+    @test nhv(dhg_th) == 4
+    @test length(dhg_th.hg_tail.he2v[1]) == 0
+end;
+
+@testset "SimpleDirectedHypergraphs io                     " begin
+
+    # Saving and loading from EHGF and HIF
+    h = dhg_load("data/test_dhg.ehgf"; format = EHGF_Format(), T = Int, HType = DirectedHypergraph)
+    mktemp("data") do path, _
+        SimpleHypergraphs.hg_save(path, h; format = EHGF_Format())
+
+        loaded_hg = replace(read(path, String), r"\n*$" => "")
+
+        @test loaded_hg ==
+            reduce(
+            replace,
+            [
+                "\r\n" => "\n",
+                r"^\"\"\"(?s).*\"\"\"\n" => "", #remove initial comments
+                r"\n*$" => "",
+            ], #remove final \n*
+            init = read("data/test_dhg.ehgf", String)
+        ) #no comments
+
+        @test loaded_hg ==
+            reduce(
+            replace,
+            [
+                "\r\n" => "\n",
+                r"^\"\"\"(?s).*\"\"\"\n" => "", #remove initial comments
+                r"\n*$" => "",
+            ], #remove final \n*
+            init = read("data/singlelinecomment.ehgf", String)
+        ) #single line comment
+
+        @test loaded_hg ==
+            reduce(
+            replace,
+            [
+                "\r\n" => "\n",
+                r"^\"\"\"(?s).*\"\"\"\n" => "", #remove initial comments
+                r"\n*$" => "",
+            ], #remove final \n*
+            init = read("data/multilinecomment.ehgf", String)
+        ) #multiple lines comment
+
+        for v in 1:nhv(dh1)
+            set_vertex_meta!(dh1, v, v)
+        end
+
+        for he in 1:nhe(dh1)
+            set_hyperedge_meta!(dh1, string(he), string(he), he)
+        end
+
+        SimpleHypergraphs.hg_save(path, dh1; format = HIF_Format())
+
+        loaded_hg = dhg_load(path; format = HIF_Format(), HType = DirectedHypergraph, T = Float64, V = Int, E = String)
+
+        @test dh1 == loaded_hg
+        @test dh1.v_meta == loaded_hg.v_meta
+        @test [Dict(:tail => i) for i in dh1.he_meta_tail] == loaded_hg.he_meta_tail
+        @test [Dict(:head => i) for i in dh1.he_meta_head] == loaded_hg.he_meta_head
+
+        @test get_vertex_meta(dh1, 1) == get_vertex_meta(loaded_hg, 1)
+        @test get_hyperedge_meta(loaded_hg, 2) == (Dict(:tail => "2"), Dict(:head => "2"))
+
+        # Saving to HIF without metadata
+        nometa_wiso = DirectedHypergraph(
+            [
+                true    nothing    nothing
+                nothing    nothing    nothing
+                nothing    nothing    true
+            ],
+            [
+                nothing    nothing    true
+                nothing    nothing    nothing
+                true    nothing    nothing
+            ]
+        )
+        SimpleHypergraphs.hg_save(path, nometa_wiso; format = HIF_Format())
+
+        # Because there are isolated vertices and empty edges, "metadata" should be stored
+        data = open(io -> JSON.parse(io; dicttype = Dict{Symbol, Any}), path)
+        @test haskey(data, :nodes)
+        @test haskey(data, :edges)
+    end
+
+    # Failed loading from EHGF
+    @test_throws ArgumentError dhg_load(
+        "data/malformedcomment.ehgf";
+        format = EHGF_Format(),
+        HType = DirectedHypergraph,
+        T = Int
+    )
+    @test_throws ArgumentError dhg_load(
+        "data/argumenterror.ehgf";
+        format = EHGF_Format(),
+        HType = DirectedHypergraph,
+        T = Int
+    )
+    @test_throws ArgumentError dhg_load(
+        "data/wrong_order.ehgf";
+        format = EHGF_Format(),
+        HType = DirectedHypergraph,
+        T = Int
+    )
+
+    # HIF: missing direction
+    @test_logs (
+        :warn,
+        "No direction given for hyperedge incidence. Ignoring; cannot include weight.",
+    ) dhg_load("data/no_direction.hif"; format = HIF_Format(), HType = DirectedHypergraph, T = Int)
+    no_direction = dhg_load("data/no_direction.hif"; format = HIF_Format(), HType = DirectedHypergraph, T = Int)
+    @test isnothing(no_direction[1, 1][1])
+
+
 end;
 
 @testset "SimpleDirectedHypergraphs special case           " begin
     # is_loopless
 
     # Not strictly loopless
-    loose_loop = DirectedHypergraph{Bool}(2,1)
+    loose_loop = DirectedHypergraph{Bool}(2, 1)
     loose_loop[1, 1, 1] = true
     loose_loop[2, 1, 1] = true
     loose_loop[2, 2, 1] = true
 
-    @test is_loopless(loose_loop; strict=true)
-    @test !is_loopless(loose_loop; strict=false)
-    
+    @test is_loopless(loose_loop; strict = true)
+    @test !is_loopless(loose_loop; strict = false)
+
     # Not loosely loopless
     loop = DirectedHypergraph{Bool}(2, 1)
     loop[1, 1, 1] = true
     loop[2, 1, 1] = true
 
-    @test !is_loopless(loop; strict=true)
-    @test !is_loopless(loop; strict=false)
+    @test !is_loopless(loop; strict = true)
+    @test !is_loopless(loop; strict = false)
 
     #Loopless
-    @test is_loopless(dh2; strict=true)
+    @test is_loopless(dh2; strict = true)
 
     # is_simple
     # Not loopless
     @test !is_simple(loop)
-    
+
     # With repeated hyperedge
     repeated = DirectedHypergraph{Bool}(
-	Matrix{Union{Bool, Nothing}}(
-	    [
-	     nothing nothing true
-	     true    true    nothing
-	     true    true    nothing
-	    ]
-	),
-	Matrix{Union{Bool, Nothing}}(
-	    [
-	     true    true    nothing
-	     nothing nothing nothing
-	     nothing nothing true
-	    ]
-	)
+        Matrix{Union{Bool, Nothing}}(
+            [
+                nothing nothing true
+                true    true    nothing
+                true    true    nothing
+            ]
+        ),
+        Matrix{Union{Bool, Nothing}}(
+            [
+                true    true    nothing
+                nothing nothing nothing
+                nothing nothing true
+            ]
+        )
     )
     @test !is_simple(repeated)
-    
+
     # Simple
     @test is_simple(dh2)
 
     # B-hypergraph
     @test !is_b_hypergraph(dh2)
-    
+
     b_hyper = DirectedHypergraph{Bool}(
-	Matrix{Union{Bool, Nothing}}(
-	    [
-		true	true	nothing
-		nothing	true	nothing
-	    ]
-	),
-	Matrix{Union{Bool, Nothing}}(
-	    [
-		true	nothing	true
-		nothing	true	nothing
-	    ]
-	)
+        Matrix{Union{Bool, Nothing}}(
+            [
+                true    true    nothing
+                nothing    true    nothing
+            ]
+        ),
+        Matrix{Union{Bool, Nothing}}(
+            [
+                true    nothing    true
+                nothing    true    nothing
+            ]
+        )
     )
     @test is_b_hypergraph(b_hyper)
-    
+
     # F-hypergraph
     @test !is_f_hypergraph(dh2)
-    
+
     f_hyper = DirectedHypergraph{Bool}(
-	Matrix{Union{Bool, Nothing}}(
-	    [
-		true	nothing	true
-		nothing	true	nothing
-	    ]
-	),
-	Matrix{Union{Bool, Nothing}}(
-	    [
-		true	true	nothing
-		nothing	true	nothing
-	    ]
-	)
+        Matrix{Union{Bool, Nothing}}(
+            [
+                true    nothing    true
+                nothing    true    nothing
+            ]
+        ),
+        Matrix{Union{Bool, Nothing}}(
+            [
+                true    true    nothing
+                nothing    true    nothing
+            ]
+        )
     )
     @test is_f_hypergraph(f_hyper)
 
@@ -299,18 +411,18 @@ end;
     @test is_bf_hypergraph(dh2)
 
     not_bf = DirectedHypergraph{Bool}(
-	Matrix{Union{Bool, Nothing}}(
-	    [
-		true	nothing	true
-		true	true	nothing
-	    ]
-	),
-	Matrix{Union{Bool, Nothing}}(
-	    [
-		true	true	nothing
-		true	true	nothing
-	    ]
-	)
+        Matrix{Union{Bool, Nothing}}(
+            [
+                true    nothing    true
+                true    true    nothing
+            ]
+        ),
+        Matrix{Union{Bool, Nothing}}(
+            [
+                true    true    nothing
+                true    true    nothing
+            ]
+        )
     )
     @test !is_bf_hypergraph(not_bf)
 
@@ -326,6 +438,7 @@ end;
     @test Graphs.has_vertex(b, 0) == false
     @test Graphs.has_vertex(b, 1) == true
     @test Graphs.has_edge(b, 1, 1) == false
+    @test Graphs.has_edge(b, 8, 2) == true
     @test Graphs.nv(Graphs.zero(b)) == 0
 
     @test Graphs.is_directed(b) == true
@@ -338,6 +451,7 @@ end;
     @test sort(collect(Graphs.outneighbors(b, 5))) == [11]
     @test sort(collect(Graphs.outneighbors(b, 1))) == [8]
     @test sort(collect(Graphs.inneighbors(b, 2))) == [8]
+    @test sort(collect(Graphs.inneighbors(b, 8))) == [1]
 
     @test Set(Graphs.vertices(b)) == Set(1:Graphs.nv(b))
 
@@ -392,6 +506,7 @@ end;
     @test sort(Graphs.outneighbors(t, 5)) == [6]
     @test sort(Graphs.inneighbors(t, 4)) == [3]
     @inferred Graphs.all_neighbors(t, 1)
+    @test Graphs.all_neighbors(t, 1; incoming = false, outgoing = false) == []
 
     @test Graphs.has_edge(t, 1, 2) == true
     @test Graphs.has_edge(t, 1, 5) == false
@@ -415,11 +530,11 @@ end;
     @test sum(Graphs.adjacency_matrix(Graphs.SimpleDiGraph(t))) == 7
 
     Random.seed!(0)
-    g = Graphs.erdos_renyi(8, 0.3; is_directed=true)
+    g = Graphs.erdos_renyi(8, 0.3; is_directed = true)
     h_from_g = DirectedHypergraph(g)
     @test Graphs.adjacency_matrix(g) == Graphs.adjacency_matrix(TwoSectionView(h_from_g))
-    @test minimum([sum((h_from_g.hg_tail.==true)[:, n]) for n in 1:6] .== 1)
-    @test minimum([sum((h_from_g.hg_head.==true)[:, n]) for n in 1:6] .== 1)
+    @test minimum([sum((h_from_g.hg_tail .== true)[:, n]) for n in 1:6] .== 1)
+    @test minimum([sum((h_from_g.hg_head .== true)[:, n]) for n in 1:6] .== 1)
     @test Graphs.SimpleGraphs.fadj(g) == Graphs.SimpleGraphs.fadj(TwoSectionView(h_from_g))
     @test Graphs.SimpleGraphs.badj(g) == Graphs.SimpleGraphs.badj(TwoSectionView(h_from_g))
 end;
@@ -434,15 +549,15 @@ end;
     @test all(length.(DHᵣ.hg_tail.v2he) .<= 5)
     @test all(length.(DHᵣ.hg_head.v2he) .<= 5)
 
-    @test_throws ErrorException random_model(1, 2, DirectedHypergraph; no_self_loops=true)
+    @test_throws ErrorException random_model(1, 2, DirectedHypergraph; no_self_loops = true)
 
-    DHr_nsl = random_model(5, 5, DirectedHypergraph; no_self_loops=true)
+    DHr_nsl = random_model(5, 5, DirectedHypergraph; no_self_loops = true)
     for i in 1:5
         @test length(intersect(keys(DHr_nsl.hg_tail.v2he[i]), keys(DHr_nsl.hg_head.v2he[i]))) == 0
     end
 
     DHᵣ2 = random_model(5, 0, DirectedHypergraph)
-    add_hyperedge!(DHᵣ2; vertices_tail=Dict(2 => true, 4 => true), vertices_head=Dict(1 => true, 5 => true))
+    add_hyperedge!(DHᵣ2; vertices_tail = Dict(2 => true, 4 => true), vertices_head = Dict(1 => true, 5 => true))
     @test nhv(DHᵣ2) == 5
     @test nhe(DHᵣ2) == 1
 
@@ -451,9 +566,9 @@ end;
     @test nhe(DHκ) == 5
     @test all(length.(DHκ.hg_tail.he2v) .+ length.(DHκ.hg_head.he2v) .== 3)
 
-    @test_throws ErrorException random_kuniform_model(1, 3, 1, DirectedHypergraph; no_self_loops=true)
+    @test_throws ErrorException random_kuniform_model(1, 3, 1, DirectedHypergraph; no_self_loops = true)
 
-    DHκ_nsl = random_kuniform_model(5, 5, 3, DirectedHypergraph; no_self_loops=true)
+    DHκ_nsl = random_kuniform_model(5, 5, 3, DirectedHypergraph; no_self_loops = true)
     for i in 1:5
         @test length(intersect(keys(DHκ_nsl.hg_tail.v2he[i]), keys(DHκ_nsl.hg_head.v2he[i]))) == 0
     end
@@ -463,9 +578,13 @@ end;
     @test nhe(DHδ) == 5
     @test all(length.(DHδ.hg_tail.v2he) .+ length.(DHδ.hg_head.v2he) .== 3)
 
-    @test_throws ErrorException random_dregular_model(1, 3, 1, DirectedHypergraph; no_self_loops=true)
+    Dhδ2 = random_dregular_model(5, 5, 3, DirectedHypergraph; no_self_loops = true)
+    @test nhv(Dhδ2) == 5
+    @test nhe(Dhδ2) == 5
+    @test all(length.(Dhδ2.hg_tail.v2he) .+ length.(Dhδ2.hg_head.v2he) .== 3)
+    @test_throws ErrorException random_dregular_model(1, 3, 1, DirectedHypergraph; no_self_loops = true)
 
-    DHδ_nsl = random_kuniform_model(5, 5, 3, DirectedHypergraph; no_self_loops=true)
+    DHδ_nsl = random_kuniform_model(5, 5, 3, DirectedHypergraph; no_self_loops = true)
     for i in 1:5
         @test length(intersect(keys(DHκ_nsl.hg_tail.v2he[i]), keys(DHκ_nsl.hg_head.v2he[i]))) == 0
     end
@@ -492,15 +611,15 @@ end;
     dh[1, 8, 9] = 1.0
     dh[2, 6, 9] = 1.5
 
-    dw1 = countmap([random_walk(dh, 1) for _ in 1:10^6])
+    dw1 = countmap([random_walk(dh, 1) for _ in 1:(10^6)])
     @test keys(dw1) == Set([2, 3])
     @test -(extrema(values(dw1))...) > -10000
 
-    dw1_rev = countmap([random_walk(dh, 1; reverse=true) for _ in 1:10^6])
+    dw1_rev = countmap([random_walk(dh, 1; reverse = true) for _ in 1:(10^6)])
     @test keys(dw1_rev) == Set([3, 4])
     @test -(extrema(values(dw1_rev))...) > -10000
 
-    dw2 = countmap([random_walk(dh, 6) for _ in 1:10^6])
+    dw2 = countmap([random_walk(dh, 6) for _ in 1:(10^6)])
     @test keys(dw2) == Set([7])
     @test -(extrema(values(dw2))...) > -10000
 
@@ -537,7 +656,7 @@ end;
     @test SimpleDirectedHypergraphs.is_connected(weak)
     @test !SimpleDirectedHypergraphs.is_strongly_connected(weak)
 
-    strong = DirectedHypergraph{Float64}(3,3)
+    strong = DirectedHypergraph{Float64}(3, 3)
     strong[1, 1, 1] = 7.0
     strong[2, 2, 1] = 8.5
     strong[1, 2, 2] = 10.0
@@ -565,11 +684,11 @@ end;
         nothing nothing 8 nothing
     ]
 
-    v_meta = Array{Union{Nothing,Char},1}(collect('a':'d'))
-    he_meta_tail = Array{Union{Nothing,Symbol},1}(Symbol.(collect('A':'D')))
-    he_meta_head = Array{Union{Nothing,Symbol},1}(Symbol.(collect('E':'H')))
+    v_meta = Array{Union{Nothing, Char}, 1}(collect('a':'d'))
+    he_meta_tail = Array{Union{Nothing, Symbol}, 1}(Symbol.(collect('A':'D')))
+    he_meta_head = Array{Union{Nothing, Symbol}, 1}(Symbol.(collect('E':'H')))
 
-    dh = DirectedHypergraph{Int,Char,Symbol}(m_tail, m_head; v_meta=v_meta, he_meta_tail=he_meta_tail, he_meta_head=he_meta_head)
+    dh = DirectedHypergraph{Int, Char, Symbol}(m_tail, m_head; v_meta = v_meta, he_meta_tail = he_meta_tail, he_meta_head = he_meta_head)
     dh_dual = dual(dh)
 
     @test nhv(dh_dual) == nhe(dh)
@@ -578,10 +697,10 @@ end;
     m_dual_tail = Matrix(dh_dual.hg_tail)
     m_dual_head = Matrix(dh_dual.hg_head)
 
-    m_dual_tail[m_dual_tail.==nothing] .= 0
-    m_dual_head[m_dual_head.==nothing] .= 0
-    m_tail[m_tail.==nothing] .= 0
-    m_head[m_head.==nothing] .= 0
+    m_dual_tail[m_dual_tail .== nothing] .= 0
+    m_dual_head[m_dual_head .== nothing] .= 0
+    m_tail[m_tail .== nothing] .= 0
+    m_head[m_head .== nothing] .= 0
 
     @test m_tail == transpose(m_dual_tail)
     @test m_head == transpose(m_dual_head)
@@ -627,26 +746,26 @@ end;
 
     # Test `short_hyperpath_vhe` for greedy hyperpath generation
     he_inedges = [
-        Set{Int}([6,7]),
-        Set{Int}([1,8]),
-        Set{Int}([1,9]),
-        Set{Int}([2,3,5]),
+        Set{Int}([6, 7]),
+        Set{Int}([1, 8]),
+        Set{Int}([1, 9]),
+        Set{Int}([2, 3, 5]),
         Set{Int}(4),
-        Set{Int}([1,2,3,5,8]),
-        Set{Int}([1,2,3,5,9]),
+        Set{Int}([1, 2, 3, 5, 8]),
+        Set{Int}([1, 2, 3, 5, 9]),
         Set{Int}(4),
-        Set{Int}(4)
+        Set{Int}(4),
     ]
 
     # Test method to find a reasonably short path from a vertex to a hyperedge
     short_path = SimpleDirectedHypergraphs.short_hyperpath_vhe(dh2, 1, 4, he_inedges, w2)
-    @test short_path == Set{Int}([1,2,4]) || short_path == Set{Int}([1,3,4])
+    @test short_path == Set{Int}([1, 2, 4]) || short_path == Set{Int}([1, 3, 4])
 
     # Test heuristic (but usually accurate) shortest-path algorithm
-    @test shortest_hyperpath_kk_heuristic(dh2, 1, 5, w2) == Set{Int}([1,2,4])
-    @test shortest_hyperpath_kk_heuristic(dh2, 1, Set{Int}([3,4]), w2) == Set{Int}([1,2])
-    @test shortest_hyperpath_kk_heuristic(dh2, Set{Int}([4,5]), 1, w2) == Set{Int}([7,9])
-    @test shortest_hyperpath_kk_heuristic(dh2, Set{Int}([2, 3]), Set{Int}([4, 1]), w2) == Set{Int}([2,7])
+    @test shortest_hyperpath_kk_heuristic(dh2, 1, 5, w2) == Set{Int}([1, 2, 4])
+    @test shortest_hyperpath_kk_heuristic(dh2, 1, Set{Int}([3, 4]), w2) == Set{Int}([1, 2])
+    @test shortest_hyperpath_kk_heuristic(dh2, Set{Int}([4, 5]), 1, w2) == Set{Int}([7, 9])
+    @test shortest_hyperpath_kk_heuristic(dh2, Set{Int}([2, 3]), Set{Int}([4, 1]), w2) == Set{Int}([2, 7])
 
     # Test generation of all possible paths
     @test length(all_hyperpaths(dh2, 1, 5)) == 2
@@ -707,8 +826,8 @@ end;
     # Test generation of all possible paths
     @test length(all_hyperpaths(dh3, 1, 9)) == 6
     @test length(all_hyperpaths(dh3, 1, Set{Int}([8, 9]))) == 7
-    @test length(all_hyperpaths(dh3, Set{Int}([1,8]), 9)) == 5
-    @test length(all_hyperpaths(dh3, Set{Int}([2,6]), Set{Int}([8,9]))) == 2
+    @test length(all_hyperpaths(dh3, Set{Int}([1, 8]), 9)) == 5
+    @test length(all_hyperpaths(dh3, Set{Int}([2, 6]), Set{Int}([8, 9]))) == 2
 
     # Test exact (integer linear programming) shortest-path algorithm
     model = SimpleDirectedHypergraphs.initialize_ilp_model(dh3, 1, 9, w3)
@@ -719,14 +838,14 @@ end;
     @test JuMP.num_variables(model[1]) == 11
     @test_throws AssertionError SimpleDirectedHypergraphs.initialize_ilp_model(dh3, 9, 1, w3)
 
-    @test shortest_hyperpath_kk_ilp(dh3, 1, 9, w3) == Set{Int}([1,6,11])
-    @test shortest_hyperpath_kk_ilp(dh3, 1, Set{Int}([7,9]), w3) == Set{Int}([1,7,10])
-    @test shortest_hyperpath_kk_ilp(dh3, Set{Int}([2,6]), 9, w3) == Set{Int}(5)
-    @test shortest_hyperpath_kk_ilp(dh3, Set{Int}([4,6]), Set{Int}([8,9]), w3) == Set{Int}([9,11])
+    @test shortest_hyperpath_kk_ilp(dh3, 1, 9, w3) == Set{Int}([1, 6, 11])
+    @test shortest_hyperpath_kk_ilp(dh3, 1, Set{Int}([7, 9]), w3) == Set{Int}([1, 7, 10])
+    @test shortest_hyperpath_kk_ilp(dh3, Set{Int}([2, 6]), 9, w3) == Set{Int}(5)
+    @test shortest_hyperpath_kk_ilp(dh3, Set{Int}([4, 6]), Set{Int}([8, 9]), w3) == Set{Int}([9, 11])
 
     # Test distance
     @test SimpleHypergraphs.distance(dh3, SnodeDistanceKKHeuristic(Set{Int}(1), Set{Int}(9)), w3) == 3
-    @test SimpleHypergraphs.distance(dh3, SnodeDistanceKKILP(Set{Int}(1), Set{Int}([7,9])), w3) == 4
+    @test SimpleHypergraphs.distance(dh3, SnodeDistanceKKILP(Set{Int}(1), Set{Int}([7, 9])), w3) == 4
 end
 
 @testset "SimpleDirectedHypergraphs diameter               " begin
@@ -767,11 +886,37 @@ end
     hg2 = DirectedHypergraph(c2_tail, c2_head)
     @test quad_clustering_coefficient(hg2) == ones(2)
     @test quad_clustering_coefficient(hg2, 2) == 1.0
-    
+
     qdh2 = quad_clustering_coefficient(dh2)
     @test isapprox(qdh2[1], 0.5)
     @test isapprox(qdh2[2], 0.15384615384615385)
     @test isapprox(qdh2[3], 0.15384615384615385)
     @test isapprox(qdh2[4], 0.15384615384615385)
     @test isapprox(qdh2[5], 0.16666666666666666)
+
+    c3_tail = [
+        true    true    nothing    nothing    true    nothing
+        nothing    nothing    true    nothing    true    nothing
+        nothing    nothing    nothing    true    true    nothing
+        true    nothing    nothing    nothing    true    nothing
+        nothing    nothing    true    nothing    true    nothing
+        true    true    true    true    true    nothing
+    ]
+    c3_head = [
+        nothing    nothing    true    nothing    nothing    true
+        nothing    true    nothing    nothing    nothing    true
+        true    nothing    nothing    nothing    nothing    true
+        nothing    nothing    true    nothing    nothing    true
+        nothing    nothing    true    true    nothing    true
+        true    true    true    true    true    true
+    ]
+    hg3 = DirectedHypergraph(c3_tail, c3_head)
+    qhg3 = quad_clustering_coefficient(hg3)
+    @test isapprox(qhg3[1], 0.4827586206896552)
+    @test isapprox(qhg3[2], 0.5588235294117647)
+    @test isapprox(qhg3[3], 0.5517241379310345)
+    @test isapprox(qhg3[4], 0.5526315789473685)
+    @test isapprox(qhg3[5], 0.36)
+    @test isapprox(qhg3[6], 0.1827956989247312)
+
 end;

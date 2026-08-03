@@ -53,10 +53,10 @@ end
     optimal pathway, but in practice, it produces the optimal pathway approximately 99% of the time.
 """
 function SimpleHypergraphs.distance(
-    hg::H,
-    distance_method::SnodeDistanceKKHeuristic,
-    hyperedge_weights::AbstractVector{T}
-) where {H<:AbstractDirectedHypergraph,T<:Real}
+        hg::H,
+        distance_method::SnodeDistanceKKHeuristic,
+        hyperedge_weights::AbstractVector{T}
+    ) where {H <: AbstractDirectedHypergraph, T <: Real}
 
     path = shortest_hyperpath_kk_heuristic(
         hg,
@@ -71,7 +71,7 @@ function SimpleHypergraphs.distance(
 
     return sum(
         hyperedge_weights[e]
-        for e in path
+            for e in path
     )
 end
 
@@ -92,10 +92,10 @@ end
 
 """
 function SimpleHypergraphs.distance(
-    hg::H,
-    distance_method::SnodeDistanceKKILP,
-    hyperedge_weights::AbstractVector{T}
-) where {H<:AbstractDirectedHypergraph,T<:Real}
+        hg::H,
+        distance_method::SnodeDistanceKKILP,
+        hyperedge_weights::AbstractVector{T}
+    ) where {H <: AbstractDirectedHypergraph, T <: Real}
 
     path = shortest_hyperpath_kk_ilp(
         hg,
@@ -110,7 +110,7 @@ function SimpleHypergraphs.distance(
 
     return sum(
         hyperedge_weights[e]
-        for e in path
+            for e in path
     )
 end
 
@@ -125,9 +125,9 @@ end
     not reachable from other vertices (i.e., if `hg` is not strongly connected), then this will return `Inf`.
 """
 function Graphs.diameter(
-    hg::H,
-    _::SnodeDistanceKKHeuristic,
-) where {H<:AbstractDirectedHypergraph}
+        hg::H,
+        _::SnodeDistanceKKHeuristic,
+    ) where {H <: AbstractDirectedHypergraph}
     if length(get_strongly_connected_components(hg)) != 1
         return Inf64
     end
@@ -137,7 +137,7 @@ function Graphs.diameter(
 
     max_dist = 0.0
     for i in 1:nhv(hg)
-        for j in i+1:nhv(hg)
+        for j in (i + 1):nhv(hg)
             dist = SimpleHypergraphs.distance(
                 hg,
                 SnodeDistanceKKHeuristic(Set{Int}(i), Set{Int}(j)),
@@ -164,9 +164,9 @@ end
     return `Inf64`.
 """
 function Graphs.diameter(
-    hg::H,
-    _::SnodeDistanceKKILP,
-) where {H<:AbstractDirectedHypergraph}
+        hg::H,
+        _::SnodeDistanceKKILP,
+    ) where {H <: AbstractDirectedHypergraph}
     if length(get_strongly_connected_components(hg)) != 1
         return Inf64
     end
@@ -176,7 +176,7 @@ function Graphs.diameter(
 
     max_dist = 0
     for i in 1:nhv(hg)
-        for j in i+1:nhv(hg)
+        for j in (i + 1):nhv(hg)
             dist = SimpleHypergraphs.distance(
                 hg,
                 SnodeDistanceKKILP(Set{Int}(i), Set{Int}(j)),

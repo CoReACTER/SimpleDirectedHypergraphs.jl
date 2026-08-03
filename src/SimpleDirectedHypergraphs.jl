@@ -5,8 +5,11 @@ using Graphs
 using StatsBase
 using Statistics
 using DataStructures
+using DataFrames
 # using PyPlot
-using JSON3
+using HTTP
+using JSON
+using JSONSchema
 using Random
 using LinearAlgebra
 using SimpleTraits

@@ -1,13 +1,16 @@
 # SimpleDirectedHypergraphs.jl
 
+![The SimpleDirectedHypergraphs.jl logo: above the package name (written in black font) is a directed hypergraph, with vertices represented by filled circles (one blue, one red, one green, one purple, and four gray) and directed hyperedges represented by curved multi-tailed/multi-headed arrows (one black, connecting the red and blue vertices on the tail end with the purple and green vertices on the head end; and three gray with dashes lines). The blue vertex replaces the 'i' in "Simple", and the purple vertex replaces the 'i' in "Directed".](./assets/sdhg_logo_whitebackground.svg)
+
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://coreacter.codeberg.page/SimpleDirectedHypergraphs.jl/@main)
 [![Build Status](https://ci.codeberg.org/api/badges/15645/status.svg)](https://ci.codeberg.org/repos/15645)
+[![Code Style: runic](https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black)](https://github.com/fredrikekre/Runic.jl)
 
-`SimpleDirectedHypergraphs.jl` is a Julia package for directed hypergraph data structures. It builds off of [SimpleHypergraphs.jl](https://github.com/pszufe/SimpleHypergraphs.jl), which in turn implements the [Graphs.jl interface](https://juliagraphs.org/Graphs.jl/stable/core_functions/interface/).
+`SimpleDirectedHypergraphs.jl` is a Julia package for directed hypergraph data structures, intended for use constructing and analyzing complex networks. It builds off of [SimpleHypergraphs.jl](https://github.com/pszufe/SimpleHypergraphs.jl), which in turn implements the [Graphs.jl interface](https://juliagraphs.org/Graphs.jl/stable/core_functions/interface/).
 
 ## What is a directed hypergraph?
 
-A *hypergraph* is a generalization of a graph. Specifically, a conventional graph is a hypergraph where all *hyperedges* connect exactly two *vertices*. In a general hypergraph, hyperedges can connect any number of vertices. They are therefore natural mathematical objects for the study of networks or systems involving interactions between more than two entities. More formally, a hypergraph $H$ is an ordered pair $(V; E)$, where $V$ is the set of vertices and $E$ is the set of hyperedges. Each hyperedge in turn is a subset of $V$, *i.e.*, $\forall e \in E, e \subseteq V$.
+A *hypergraph* is a generalization of a graph. Specifically, a conventional graph is a special case of a hypergraph where all *hyperedges* connect exactly two *vertices*. In a more general hypergraph, hyperedges can connect any number of vertices. They are therefore natural mathematical objects for the study of networks or systems involving interactions between more than two entities. More formally, a hypergraph $H$ is an ordered pair $(V; E)$, where $V$ is the set of vertices and $E$ is the multiset of hyperedges. Each hyperedge in turn is a subset of $V$, *i.e.*, $\forall e \in E, e \subseteq V$.
 
 `SimpleHypergraphs.jl` represents hypergraphs via a (weighted) $m \times n$ *incidence matrix* $I$, where $m = |V|$, $n = |E|$, and $I_{i,j} =$ `nothing` if vertex $i$ is not in hyperedge $j$ and $I_{i,j} = q$ otherwise, where $q$ is some real value. Actually, hypergraphs in `SimpleHypergraphs.jl` are defined as matrices:
 
@@ -15,7 +18,7 @@ A *hypergraph* is a generalization of a graph. Specifically, a conventional grap
 abstract type AbstractHypergraph{T} <: AbstractMatrix{T} end
 ```
 
-A *directed hypergraph* is, analogously, a generalization of a directed graph. There are many possible definitions of hypergraphs in use in the literature. Here, we take a rather general definition: a directed hypergraph 
+A *directed hypergraph* is, analogously, a generalization of a directed graph. There are multiple possible definitions of hypergraphs in use in the literature. Here, we take a rather general definition: a directed hypergraph 
 
 $$\overrightarrow{H} := (V; \overrightarrow{E})$$
 
@@ -23,7 +26,7 @@ where a *directed hyperedge*
 
 $$\overrightarrow{e} := (e^t \subseteq V; e^h \subseteq V)$$
 
-Here, $e^t$ is called the *tail* of the directed hyperedge, and $e^h$ is called the head. In our definition, the head and tail can both include any number of vertices (limited, of course, by the size of $V$).
+Here, $e^t$ is called the *tail* of the directed hyperedge, and $e^h$ is called the head. In our definition, the head and tail can both include any number of vertices (limited, of course, by the size of $V$). As with the hypergraph definition given above, $\overrightarrow{E}$ is a multiset, so directed hyperedges can be repeated.
 
 Like the undirected hypergraphs in `SimpleHypergraphs.jl`, we represent directed hypergraphs in `SimpleDirectedHypergraphs.jl` as matrices. Under the hood, a directed hypergraph is made up of two undirected hypergraphs: one representing the "tails" and one representing the "head".
 
@@ -51,12 +54,13 @@ Note that `SimpleHypergraphs.jl` has a Python dependency, but it is only necessa
 
 `SimpleDirectedHypergraphs.jl` is still in early development. Things could change significantly, and the interface could even break!
 
-Currently, this package is rather lean. Currently implemented features include:
+Currently implemented features include:
 - An abstract type for directed hypergraphs (`AbstractDirectedHypergraph`)
 - A concrete `DirectedHypergraph` type, which can be constructed directly, using `Graphs.jl` `SimpleDiGraph`, or using matrices.
 - Extensions of some `SimpleHypergraphs.jl` functionality, including functions to modify directed hypergraphs (*e.g.*, by pruning or adding hyperedges), bipartite and two-section views, and random hypergraph models
-- Simple input/output operations, *e.g.*, to JSON
+- Simple input/output operations, *e.g.*, to the JSON-based Hypergraph Interchange Format ([HIF](https://doi.org/10.1017/nws.2025.10018))
 - Algorithms to detect weakly and strongly connected components, with the latter based on the work of Francisco José Martín-Recuerda Moyano (PhD dissertation, 2016)
 - Shortest-path, distance, and diameter algorithms, based on the work of Krieger & Kececioglu (DOI: [10.1186/s13015-022-00217-9](https://doi.org/10.1186/s13015-022-00217-9) and DOI: [10.1089/cmb.2023.0242](http://doi.org/10.1089/cmb.2023.0242))
+- The quad clustering algorithm (DOI: [10.1063/5.0188246](https://doi.org/10.1063/5.0188246)) for calculating the degree of clustering
 
-If you have suggestions of features that you want added, please make suggestions in the [GitHub Issues](https://github.com/CoReACTER/SimpleDirectedHypergraphs.jl/issues) page. You are also encouraged to add new features yourself; pull requests are always welcome.
+If you have suggestions of features that you want added, please make suggestions in the [Codeberg Issues](https://codeberg.org/CoReACTER/SimpleDirectedHypergraphs.jl/issues) page. You are also encouraged to add new features yourself. Pull requests are always welcome; see our guide to [contributing](./CONTRIBUTING.md) for more information.

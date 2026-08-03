@@ -1,4 +1,4 @@
-function _default_heselect(h::H, v::Int; reverse::Bool=false) where {H<:AbstractDirectedHypergraph}
+function _default_heselect(h::H, v::Int; reverse::Bool = false) where {H <: AbstractDirectedHypergraph}
     he_tail, he_head = gethyperedges(h, v)
 
     if reverse
@@ -7,11 +7,11 @@ function _default_heselect(h::H, v::Int; reverse::Bool=false) where {H<:Abstract
         hes = he_tail
     end
 
-    sort!(collect(keys(hes))), ones(length(hes))
+    return sort!(collect(keys(hes))), ones(length(hes))
 end
 
 
-function _default_vselect(h::H, he::Int; reverse::Bool=false) where {H<:AbstractDirectedHypergraph}
+function _default_vselect(h::H, he::Int; reverse::Bool = false) where {H <: AbstractDirectedHypergraph}
     vs_tail, vs_head = getvertices(h, he)
 
     if reverse
@@ -20,7 +20,7 @@ function _default_vselect(h::H, he::Int; reverse::Bool=false) where {H<:Abstract
         vs = vs_head
     end
 
-    sort!(collect(keys(vs))), ones(length(vs))
+    return sort!(collect(keys(vs))), ones(length(vs))
 
 end
 
@@ -44,14 +44,16 @@ Next a vertex within hyperedge is with weights proportional to `vselect` functio
 a vertex identifier or a hyperedge identifier. The return values of both functions
 should be respectively a list of hyperedges or vertices and their weights.
 """
-function SimpleHypergraphs.random_walk(h::H, start::Int;
-    heselect::Function=_default_heselect,
-    vselect::Function=_default_vselect,
-    reverse::Bool=false) where {H<:AbstractDirectedHypergraph}
+function SimpleHypergraphs.random_walk(
+        h::H, start::Int;
+        heselect::Function = _default_heselect,
+        vselect::Function = _default_vselect,
+        reverse::Bool = false
+    ) where {H <: AbstractDirectedHypergraph}
     1 <= start <= nhv(h) || throw(ArgumentError("invalid start vertex index"))
-    hes, hew = heselect(h, start, reverse=reverse)
+    hes, hew = heselect(h, start, reverse = reverse)
     he = sample(hes, Weights(hew))
-    ves, vw = vselect(h, he, reverse=reverse)
+    ves, vw = vselect(h, he, reverse = reverse)
     return sample(ves, Weights(vw))
 end
 
@@ -64,9 +66,9 @@ Return an array of weakly connected components in the directed hypergraph `h`
 into an undirected hypergraph and then obtaining the conected components of
 that hypergraph.
 """
-function get_weakly_connected_components(h::H) where {H<:AbstractDirectedHypergraph}
+function get_weakly_connected_components(h::H) where {H <: AbstractDirectedHypergraph}
     undirected = to_undirected(h)
-    get_connected_components(undirected)
+    return get_connected_components(undirected)
 end
 
 
@@ -78,9 +80,9 @@ This is an auxiliary function for `get_strongly_connected_components`, which
 determines the strongly connected components of a directed hypergraph.
 """
 function _visit(
-    h::H,
-    v::Int
-) where {H<:AbstractDirectedHypergraph}
+        h::H,
+        v::Int
+    ) where {H <: AbstractDirectedHypergraph}
     visited = zeros(Bool, nhv(h))
     visited_tail_nodes = zeros(Int, nhe(h))
 
@@ -112,7 +114,7 @@ function _visit(
         end
     end
 
-    bcc
+    return bcc
 end
 
 
@@ -124,9 +126,9 @@ Return an array of strongly connected components in the directed hypergraph `h`
 Francisco José Martín-Recuerda Moyano (PhD dissertation, 2016).
 
 """
-function get_strongly_connected_components(h::H) where {H<:AbstractDirectedHypergraph}
+function get_strongly_connected_components(h::H) where {H <: AbstractDirectedHypergraph}
 
-    T = Dict{Vector{Int},Set{Int}}()
+    T = Dict{Vector{Int}, Set{Int}}()
 
     for v in 1:nhv(h)
         bcc_v = _visit(h, v)
@@ -139,7 +141,7 @@ function get_strongly_connected_components(h::H) where {H<:AbstractDirectedHyper
         push!(T[bcc_sorted], v)
     end
 
-    [sort!(collect(v)) for (_, v) in T if length(v) != 0]
+    return [sort!(collect(v)) for (_, v) in T if length(v) != 0]
 end
 
 
