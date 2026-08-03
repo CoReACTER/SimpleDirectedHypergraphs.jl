@@ -277,6 +277,9 @@ Adds weights to the hypergraph `hg` based on the incidences provided in `data`.
 The `edges` and `nodes` DataFrames are used to map edge and node identifiers to
 their respective indices in the hypergraph.
 
+This code is heavily inspired by the corresponding function in `SimpleHypergraphs.jl`; see
+https://github.com/pszufe/SimpleHypergraphs.jl.
+
 **Arguments**
 
 * `data` : parsed `HIF` (hypergraph interchange format) data in dictionary format
@@ -324,6 +327,9 @@ end
 THIS FUNCTION IS INTERNAL AND SHOULD NOT BE CALLED DIRECTLY.
 Constructs vertex or directed hyperedge `DataFrame` objects based on attributes parsed from an
 `HIF` (hypergraph interchange format) file.
+
+This code is heavily inspired by the corresponding function in `SimpleHypergraphs.jl`; see
+https://github.com/pszufe/SimpleHypergraphs.jl.
 
 **Arguments**
 
@@ -443,6 +449,9 @@ for tail metadata and a collection for head metadata
 
 TODO: maybe this is too storage-inefficient? Maybe we put it all on one side?
 Maybe we reassess if having split tail and head metadata is a good idea?
+
+This code is heavily inspired by the corresponding function in `SimpleHypergraphs.jl`; see
+https://github.com/pszufe/SimpleHypergraphs.jl.
 
 **Arguments**
 

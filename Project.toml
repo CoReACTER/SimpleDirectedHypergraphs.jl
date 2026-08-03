@@ -1,10 +1,9 @@
 name = "SimpleDirectedHypergraphs"
 uuid = "a42c6b43-640c-4761-b4a8-4f98c31d02e9"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Evan Walter Clark Spotte-Smith"]
 
 [deps]
-Coverage = "a2441757-f6aa-5fb2-8edb-039e3f45d037"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 DocumenterTools = "35a29f4d-8980-5a13-9543-d66fff28ecb8"
@@ -24,7 +23,6 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 StructTypes = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
 
 [compat]
-Coverage = "1.8.1"
 DataFrames = "1.8.2"
 DataStructures = "^0.18.11"
 DocumenterTools = "0.1.21"
