@@ -457,6 +457,10 @@ an error.
 * `nothing`
 * `idx` : Pair of integers `i` and `j`, where `i` is a vertex index and `j` is a dihyperedge index
 
+**Returns**
+
+`h`
+
 """
 @inline function Base.setindex!(h::H, ::Nothing, idx::Vararg{Int, 2}) where {H <: AbstractDirectedHypergraph}
     @boundscheck checkbounds(h.hg_tail, idx...)
@@ -479,6 +483,10 @@ Adds a vertex to a hyperedge (represented by indices `idx`) and assigns value
 * `v` : A real-valued weight which will be applied to a vertex in both the tail and the head of a
     dihyperedge
 * `idx` : Pair of integers `i` and `j`, where `i` is a vertex index and `j` is a dihyperedge index
+
+**Returns**
+
+`h`
 
 """
 @inline function Base.setindex!(h::H, v::Real, idx::Vararg{Int, 2}) where {H <: AbstractDirectedHypergraph}
@@ -511,6 +519,10 @@ value of `nothing` means that the vertex will be removed from that side of the h
     respectively
 * `idx` : Pair of integers `i` and `j`, where `i` is a vertex index and `j` is a dihyperedge index
 
+**Returns**
+
+`h`
+
 """
 @inline function Base.setindex!(h::H, v::Tuple{Union{Real, Nothing}, Union{Real, Nothing}}, idx::Vararg{Int, 2}) where {H <: AbstractDirectedHypergraph}
     @boundscheck checkbounds(h.hg_tail, idx...)
@@ -537,6 +549,10 @@ remove a vertex from a hyperedge when it is not present will not throw an error.
 * `nothing`
 * `idx` : Three-tuple of integers `side`, `i, and `j`, where `side` is either `1` (meaning "tail")
     or `2` (meaning "head"), `i` is a vertex index, and `j` is a dihyperedge index
+
+**Returns**
+
+`h`
 
 """
 @inline function Base.setindex!(h::H, ::Nothing, idx::Vararg{Int, 3}) where {H <: AbstractDirectedHypergraph}
@@ -569,6 +585,10 @@ Adds a vertex to a dihyperedge (represented by indices `idx`, where the first in
 * `v` : A real-valued weight
 * `idx` : 3-tuple of integers `side`, `i`, and `j`, where `side` is either `1` ("tail") or `2`
     ("head"), `i` is a vertex index, and `j` is a dihyperedge index
+
+**Returns**
+
+`h`
 
 """
 @inline function Base.setindex!(h::H, v::Real, idx::Vararg{Int, 3}) where {H <: AbstractDirectedHypergraph}
@@ -716,6 +736,10 @@ can be stored with the vertex using the `v_meta` keyword parameter.
     where the new vertex will be in the head; default is an empty dict of type `D`
 * `v_meta` : (Optional) metadata for the new vertex; default is `nothing`
 
+**Returns**
+
+`ix`, the index of the new vertex
+
 """
 function SimpleHypergraphs.add_vertex!(
         h::DirectedHypergraph{T, V, E, D};
@@ -755,6 +779,10 @@ dihypergraph and the list of vertices will be shrunk.
 
 * `h` : Dihypergraph
 * `v` : Vertex index
+
+**Returns**
+
+`h`
 
 """
 function SimpleHypergraphs.remove_vertex!(h::DirectedHypergraph, v::Int)
@@ -820,6 +848,10 @@ can be stored with the hyperedge using the `he_meta_tail` and `he_meta_head` key
 * `he_meta_tail` : (Optional) metadata for the new dihyperedge's tail; default is `nothing`
 * `he_meta_head` : (Optional) metadata for the new dihyperedge's head; default is `nothing`
 
+**Returns**
+
+`ix`, the index of the new dihyperedge
+
 """
 function SimpleHypergraphs.add_hyperedge!(
         h::DirectedHypergraph{T, V, E, D};
@@ -859,6 +891,10 @@ dihyperedge of the dihypergraph and the list of dihyperedges (and dihyperedge me
 
 * `h` : Dihypergraph
 * `e` : Dihyperedge index
+
+**Returns**
+
+`h`
 
 """
 function SimpleHypergraphs.remove_hyperedge!(h::DirectedHypergraph, e::Int)
@@ -911,6 +947,10 @@ Remove all vertices with degree 0 and all hyperedges of size 0.
 
 * `h` : Dihypergraph
 
+**Returns**
+
+`h`
+
 """
 function SimpleHypergraphs.prune_hypergraph!(h::H) where {H <: AbstractDirectedHypergraph}
     for e in reverse(1:nhe(h))
@@ -955,6 +995,10 @@ Sets a new metadata value `new_value` for the vertex `v` in the dihypergraph `h`
 * `new_value` : Metadata to replace existing metadata
 * `v` : Vertex index 
 
+**Returns**
+
+`h.v_meta`
+
 """
 function SimpleHypergraphs.set_vertex_meta!(
         h::DirectedHypergraph{T, V, E, D},
@@ -968,54 +1012,98 @@ end
 
 
 """
-    get_vertex_meta(h::DirectedHypergraph{T, V, E, D}, id::Int
-                    ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
+    get_vertex_meta(
+	h::DirectedHypergraph{T, V, E, D},
+	v::Int
+    ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
 
-Returns a meta value stored at the vertex `id` in the directed hypergraph `h`.
+Returns a metadata value associated with the vertex with index `v` in the dihypergraph `h`.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `v` : Vertex index
+
+**Returns**
+
+Vertex metadata at index `v`
 
 """
 function SimpleHypergraphs.get_vertex_meta(
-        h::DirectedHypergraph{T, V, E, D}, id::Int
+        h::DirectedHypergraph{T, V, E, D},
+	v::Int
     ) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
-    @boundscheck checkbounds(h.v_meta, id)
-    return h.v_meta[id]
+    @boundscheck checkbounds(h.v_meta, v)
+    return h.v_meta[v]
 end
 
 
 """
-    set_hyperedge_meta!(h::DirectedHypergraph{T, V, E, D},
-        new_value_tail::Union{E,Nothing}, new_value_head::Union{E,Nothing}, id::Int
-        ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
+    set_hyperedge_meta!(
+	h::DirectedHypergraph{T, V, E, D},
+        new_value_tail::Union{E,Nothing},
+	new_value_head::Union{E,Nothing},
+	e::Int
+    ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
 
-Sets a new meta value `new_value` for the hyperedge `id` in the directed hypergraph `h`.
+Sets new metadata for the hyperedge with index `e` in the dihypergraph `h`.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `new_value_tail` : Metadata value for the dihyperedge's tail (or `nothing`)
+* `new_value_head` : Metadata value for the dihyperedge's head (or `nothing`)
+* `e` : Index for the dihyperedge
+
+**Returns**
+
+`(h.he_meta_tail, h.he_meta_head)`
 
 """
 function SimpleHypergraphs.set_hyperedge_meta!(
         h::DirectedHypergraph{T, V, E, D},
-        new_value_tail::Union{E, Nothing}, new_value_head::Union{E, Nothing}, id::Int
+        new_value_tail::Union{E, Nothing},
+	new_value_head::Union{E, Nothing},
+	e::Int
     ) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
-    @boundscheck checkbounds(h.he_meta_tail, id)
-    @boundscheck checkbounds(h.he_meta_head, id)
+    @boundscheck checkbounds(h.he_meta_tail, e)
+    @boundscheck checkbounds(h.he_meta_head, e)
 
-    h.he_meta_tail[id] = new_value_tail
-    h.he_meta_head[id] = new_value_head
+    h.he_meta_tail[e] = new_value_tail
+    h.he_meta_head[e] = new_value_head
 
     return (h.he_meta_tail, h.he_meta_head)
 end
 
 
 """
-    set_hyperedge_meta!(h::DirectedHypergraph{T, V, E, D},
-        new_value::Union{E,Nothing}, id::Int, side::HyperedgeDirection
-        ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
+    set_hyperedge_meta!(
+	h::DirectedHypergraph{T, V, E, D},
+        new_value::Union{E,Nothing},
+	e::Int,
+	side::HyperedgeDirection
+    ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
 
-Sets a new meta value `new_value` for the hyperedge `id` in the direction `side`
-    for a directed hypergraph `h`.
+Sets a new meta value `new_value` for the hyperedge with index `e` in the direction `side` for a
+dihypergraph `h`.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `new_value` : Metadata value for this dihyperedge (or `nothing`)
+* `e` : Dihyperedge index
+* `side` : a `HyperedgeDirection` (either 1 or 2)
+
+**Returns**
+
+`h.he_meta_tail` (if `side == tail`) or `h.he_meta_head` (if `side == head`)
 
 """
 function SimpleHypergraphs.set_hyperedge_meta!(
         h::DirectedHypergraph{T, V, E, D},
-        new_value::Union{E, Nothing}, id::Int, side::HyperedgeDirection
+        new_value::Union{E, Nothing},
+	e::Int,
+	side::HyperedgeDirection
     ) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
 
     return if side == tail
@@ -1032,9 +1120,23 @@ end
 
 
 """
-    get_hyperedge_meta(h::DirectedHypergraph{T, V, E, D}, id::Int)
-        where {T <: Real, V, E, D <: AbstractDict{Int,T}}
-Returns a meta value stored at the hyperedge `id` in the directed hypergraph `h`.
+    get_hyperedge_meta(
+	h::DirectedHypergraph{T, V, E, D},
+	e::Int
+    ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
+
+Returns the metadata for the dihyperedge with index `e` in the dihypergraph `h`.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `e` : Dihyperedge index
+
+**Returns**
+
+A 2-tuple `(tail_meta, head_meta)`, where `tail_meta` is the metadata associated with dihyperedge
+`e` on the tail side, and `head_meta` is the metadata associated with dihyperedge `e` on the head
+side.
 
 """
 function SimpleHypergraphs.get_hyperedge_meta(
@@ -1048,13 +1150,30 @@ end
 
 
 """
-    get_hyperedge_meta(h::DirectedHypergraph{T, V, E, D}, id::Int, side::HyperedgeDirection)
-        where {T <: Real, V, E, D <: AbstractDict{Int,T}}
-Returns a meta value stored at the hyperedge `id` in the directed hypergraph `h`.
+    get_hyperedge_meta(
+	h::DirectedHypergraph{T, V, E, D},
+	e::Int,
+	side::HyperedgeDirection
+    ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
+
+Returns a metadata value for one side of the dihyperedge with index `e` in the dihypergraph `h`.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `e` : Dihyperedge index
+* `side` : a `HyperedgeDirection` (either 1 or 2)
+
+**Returns**
+
+`meta`, where `meta` is the metadata associated with the tail (if `side == tail`) or the head
+(if `side == head`) of the dihyperedge with index `e`
 
 """
 function SimpleHypergraphs.get_hyperedge_meta(
-        h::DirectedHypergraph{T, V, E, D}, id::Int, side::HyperedgeDirection
+        h::DirectedHypergraph{T, V, E, D},
+	e::Int,
+	side::HyperedgeDirection
     ) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
 
     return if side == tail
@@ -1070,7 +1189,18 @@ end
 """
     nhe(h::H) where {H <: AbstractDirectedHypergraph}
 
-Return the number of hyperedges in the directed hypergraph `h`.
+Return the number of dihyperedges in the dihypergraph `h`.
+
+**Arguments**
+
+* `h` : Dihypergraph
+
+**Returns**
+
+The number of dihyperedges in `h`. Note that if, for some reason, the `he2v` lists in `h.hg_tail`
+and `h.hg_head` have different lengths (implying that there are different numbers of dihyperedge
+tails than heads), an error is raised.
+
 """
 function SimpleHypergraphs.nhe(h::H) where {H <: AbstractDirectedHypergraph}
     return (length(h.hg_tail.he2v) == length(h.hg_head.he2v)) ? length(h.hg_tail.he2v) : throw("Tail and head sides of hypergraph have different numbers of hyperedges!")
@@ -1080,7 +1210,15 @@ end
 """
     nhv(h::H) where {H <: AbstractDirectedHypergraph}
 
-Return the number of vertices in the directed hypergraph `h`.
+Return the number of vertices in the dihypergraph `h`.
+
+**Arguments**
+
+* `h` : Dihypergraph
+
+**Returns**
+
+The number of vertices in `h`
 """
 function SimpleHypergraphs.nhv(h::H) where {H <: AbstractDirectedHypergraph}
     return (length(h.hg_tail.v2he) == length(h.hg_head.v2he)) ? length(h.hg_tail.v2he) : throw("Tail and head sides of hypergraph have different numbers of hyperedges!")
@@ -1096,7 +1234,17 @@ In the "strict" definition, a dihyperedge is a loop if its tail and head contain
 vertices (weights can be different). In the "loose" definition, a dihyperedge is a loop if there is
 any vertex that appears in both the tail and the head.
 
-A directed hypergraph is "loopless" if there are no dihyperedges that are loops.
+A dihypergraph is "loopless" if there are no dihyperedges that are loops.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `strict` : Bool
+
+**Returns**
+
+`loopless`, a `Bool` indicating if `h` is loopless (`true`) or not (`false`)
+
 """
 function is_loopless(h::H; strict::Bool = true) where {H <: AbstractDirectedHypergraph}
     loopless = true
@@ -1120,9 +1268,18 @@ end
 """
     is_simple(h::H) where {H <: AbstractDirectedHypergraph}
 
-A directed hypergraph is *simple* if it is loopless (using the strict definition; see `is_loopless`)
-and if it is without repeated hyperedge (meaning that there are no two hyperedges in the directed
-hypergraph with identical tails and heads, ignoring the vertex-hyperedge weights).
+A dihypergraph is *simple* if it is loopless (using the strict definition; see `is_loopless`)
+and if it is without repeated dihyperedge (meaning that there are no two hyperedges in the
+dihypergraph with identical tails and heads, ignoring the vertex-hyperedge weights).
+
+**Arguments**
+
+* `h` : Dihypergraph
+
+**Returns**
+
+A `Bool` indicating if `h` is simple (`true`) or not (`false`)
+
 """
 function is_simple(h::H) where {H <: AbstractDirectedHypergraph}
     # Is the dihypergraph without loop?
@@ -1144,7 +1301,16 @@ end
     is_b_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
 
 A *B-edge* is a dihyperedge which may have multiple vertices in the tail but which has exactly one
-vertex in the head. A *B-hypergraph* is a directed hypergraph where all dihyperedges are B-edges.
+vertex in the head. A *B-hypergraph* is a dihypergraph where all dihyperedges are B-edges.
+
+**Arguments**
+
+* `h` : Dihypergraph
+
+**Returns**
+
+A `Bool` indicating if `h` is a B-hypergraph (`true`) or not (`false`)
+
 """
 function is_b_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
     return all(x -> length(h.hg_head.he2v[x]) == 1, 1:nhe(h))
@@ -1155,7 +1321,16 @@ end
     is_f_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
 
 An *F-edge* is a dihyperedge which may have multiple vertices in the head but which has exactly one
-vertex in the tail. An *F-hypergraph* is a directed hypergraph where all dihyperedges are F-edges.
+vertex in the tail. An *F-hypergraph* is a dihypergraph where all dihyperedges are F-edges.
+
+**Arguments**
+
+* `h` : Dihypergraph
+
+**Returns**
+
+A `Bool` indicating if `h` is an F-hypergraph (`true`) or not (`false`)
+
 """
 function is_f_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
     return all(x -> length(h.hg_tail.he2v[x]) == 1, 1:nhe(h))
@@ -1165,9 +1340,18 @@ end
 """
     is_bf_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
 
-A *BF-hypergraph* is a directed hypergraph where all dihyperedges are either B-edges (see
+A *BF-hypergraph* is a dihypergraph where all dihyperedges are either B-edges (see
 `is_b_hypergraph`), meaning that they have exactly one vertex in the head, or F-edges (see
 `is_f_hypergraph`), meaning that they have exactly one vertex in the tail.
+
+**Arguments**
+
+* `h` : Dihypergraph
+
+**Returns**
+
+A `Bool` indicating if `h` is a BF-hypergraph (`true`) or not (`false`)
+
 """
 function is_bf_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
     return all(x -> length(h.hg_tail.he2v[x]) == 1 || length(h.hg_head.he2v[x]) == 1, 1:nhe(h))
