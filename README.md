@@ -18,27 +18,27 @@ A *hypergraph* is a generalization of a graph. Specifically, a conventional grap
 abstract type AbstractHypergraph{T} <: AbstractMatrix{T} end
 ```
 
-A *directed hypergraph* is, analogously, a generalization of a directed graph. There are multiple possible definitions of hypergraphs in use in the literature. Here, we take a rather general definition: a directed hypergraph 
+A *directed hypergraph* (*dihypergraph*) is, analogously, a generalization of a directed graph. There are multiple possible definitions of dihypergraphs in use in the literature. Here, we take a rather general definition: a dihypergraph 
 
 $$\overrightarrow{H} := (V; \overrightarrow{E})$$
 
-where a *directed hyperedge*
+where a *directed hyperedge* (dihyperedge)
 
 $$\overrightarrow{e} := (e^t \subseteq V; e^h \subseteq V)$$
 
-Here, $e^t$ is called the *tail* of the directed hyperedge, and $e^h$ is called the head. In our definition, the head and tail can both include any number of vertices (limited, of course, by the size of $V$). As with the hypergraph definition given above, $\overrightarrow{E}$ is a multiset, so directed hyperedges can be repeated.
+Here, $e^t$ is called the *tail* of the dihyperedge, and $e^h$ is called the *head*. In our definition, the head and tail can both include any number of vertices (limited, of course, by the size of $V$). As with the hypergraph definition given above, $\overrightarrow{E}$ is a multiset, so dihyperedges can be repeated.
 
-Like the undirected hypergraphs in `SimpleHypergraphs.jl`, we represent directed hypergraphs in `SimpleDirectedHypergraphs.jl` as matrices. Under the hood, a directed hypergraph is made up of two undirected hypergraphs: one representing the "tails" and one representing the "head".
+Like the undirected hypergraphs in `SimpleHypergraphs.jl`, we represent dihypergraphs in `SimpleDirectedHypergraphs.jl` as matrices. Under the hood, a dihypergraph is made up of two undirected hypergraphs: one representing the "tails" and one representing the "heads".
 
-## What are directed hypergraphs good for?
+## What are dihypergraphs good for?
 
-At the risk of stating the obvious, a directed hypergraph is useful in cases where there are multiple components (vertices) connected by some interaction that (at least sometimes) involves more than two components, and where interactions have a sense of directionality or asymmetry.
+At the risk of stating the obvious, a dihypergraph is useful in cases where there are multiple components (vertices) connected by some interaction that (at least sometimes) involves more than two components, and where interactions have a sense of directionality or asymmetry.
 
 The initial motivation for this package was to study chemical reaction networks (CRNs), which describe systems of (potentially interacting or mutually dependent) reactions:
 
-![A simple chemical reaction network consisting of three reactions (a), represented as a set of species and a set of reactions (b) and as a directed hypergraph (c).](./assets/set_vs_hgraph_white.png)
+![A simple chemical reaction network consisting of three reactions (a), represented as a set of species and a set of reactions (b) and as a dihypergraph (c).](./assets/set_vs_hgraph_white.png)
 
-Other applications of directed hypergraphs include [transportation systems, databases](https://doi.org/10.1016/0166-218X(93)90045-P), and [decision theory](https://doi.org/10.1109/ACCESS.2024.3415120).
+Other applications of dihypergraphs include [transportation systems, databases](https://doi.org/10.1016/0166-218X(93)90045-P), and [decision theory](https://doi.org/10.1109/ACCESS.2024.3415120).
 
 ## Installation
 
@@ -48,16 +48,16 @@ Other applications of directed hypergraphs include [transportation systems, data
 (ENVIRONMENT) pkg> add SimpleDirectedHypergraphs
 ```
 
-Note that `SimpleHypergraphs.jl` has a Python dependency, but it is only necessary for plotting. If you want to use the available plotting functions for non-directed hypergraphs, you'll need to follow the additional installation instructions in the [SimpleHypergraphs.jl README](https://github.com/pszufe/SimpleHypergraphs.jl).
+Note that `SimpleHypergraphs.jl` has a Python dependency, but it is only necessary for plotting. If you want to use the available plotting functions for undirected hypergraphs, you'll need to follow the additional installation instructions in the [SimpleHypergraphs.jl README](https://github.com/pszufe/SimpleHypergraphs.jl).
 
 ## Features and contributing
 
 `SimpleDirectedHypergraphs.jl` is still in early development. Things could change significantly, and the interface could even break!
 
 Currently implemented features include:
-- An abstract type for directed hypergraphs (`AbstractDirectedHypergraph`)
+- An abstract type for dihypergraphs (`AbstractDirectedHypergraph`)
 - A concrete `DirectedHypergraph` type, which can be constructed directly, using `Graphs.jl` `SimpleDiGraph`, or using matrices.
-- Extensions of some `SimpleHypergraphs.jl` functionality, including functions to modify directed hypergraphs (*e.g.*, by pruning or adding hyperedges), bipartite and two-section views, and random hypergraph models
+- Extensions of some `SimpleHypergraphs.jl` functionality, including functions to modify dihypergraphs (*e.g.*, by pruning or adding hyperedges), bipartite and two-section views, and random hypergraph models
 - Simple input/output operations, *e.g.*, to the JSON-based Hypergraph Interchange Format ([HIF](https://doi.org/10.1017/nws.2025.10018))
 - Algorithms to detect weakly and strongly connected components, with the latter based on the work of Francisco José Martín-Recuerda Moyano (PhD dissertation, 2016)
 - Shortest-path, distance, and diameter algorithms, based on the work of Krieger & Kececioglu (DOI: [10.1186/s13015-022-00217-9](https://doi.org/10.1186/s13015-022-00217-9) and DOI: [10.1089/cmb.2023.0242](http://doi.org/10.1089/cmb.2023.0242))
