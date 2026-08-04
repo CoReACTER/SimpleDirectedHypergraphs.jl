@@ -1,3 +1,21 @@
+"""
+    _default_heselect(h::H, v::Int; reverse::Bool = false) where {H <: AbstractDirectedHypergraph}
+
+Default hyperedge selection algorithm (for `random_walk`). All hyperedges are given equal weights.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `v` : Vertex index
+* `reverse` : If `true` (default `false`), consider hyperedges where `v` is in the head, rather
+    than in the tail
+
+**Returns**
+
+* A sorted list of the possible hyperedge indices
+* A weight vector with the same length as the list of indices (all entries are `1`)
+
+"""
 function _default_heselect(h::H, v::Int; reverse::Bool = false) where {H <: AbstractDirectedHypergraph}
     he_tail, he_head = gethyperedges(h, v)
 
@@ -10,7 +28,24 @@ function _default_heselect(h::H, v::Int; reverse::Bool = false) where {H <: Abst
     return sort!(collect(keys(hes))), ones(length(hes))
 end
 
+"""
+    _default_vselect(h::H, e::Int; reverse::Bool = false) where {H <: AbstractDirectedHypergraph}
 
+Default vertex selection algorithm (for `random_walk`). All vertices are given equal weights.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `e` : Vertex index
+* `reverse` : If `true` (default `false`), consider vertices in the tail of dihyperedge `e`, rather
+    than in the head
+
+**Returns**
+
+* A sorted list of the possible vertex indices
+* A weight vector with the same length as the list of indices (all entries are `1`)
+
+"""
 function _default_vselect(h::H, he::Int; reverse::Bool = false) where {H <: AbstractDirectedHypergraph}
     vs_tail, vs_head = getvertices(h, he)
 
@@ -34,15 +69,31 @@ end
         reverse::bool
     ) where {H <: AbstractDirectedHypergraph}
 
-Return a next vertex visited in assuming a random walk starting from vertex `start`.
-First a hyperedge is sampled with weights proportional to `heselect` function
-(by default each hyperedge is sampled with the same probability).
-Next a vertex within hyperedge is with weights proportional to `vselect` function
-(by default each vertex, including the source, is sampled with the same probability).
+Return the next vertex visited in a random walk starting from vertex `start`. First, a hyperedge
+is sampled with weights based on the output of the `heselect` function (by default, each hyperedge
+is sampled with the same probability). Next, a vertex within that dihyperedge is selected, with
+weights based on the output of the `vselect` function (by default, each vertex, including the
+source, is sampled with the same probability).
 
-`heselect` and `vselect` functions take two arguments a `Hypergraph` and respectively
-a vertex identifier or a hyperedge identifier. The return values of both functions
-should be respectively a list of hyperedges or vertices and their weights.
+`heselect` and `vselect` functions take two arguments: a dihypergraph and, respectively, a vertex
+index or a hyperedge index. The return values of both functions should be, respectively, a list of
+dihyperedge or vertex indices and their weights.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `start` : An initial vertex index
+* `heselect` : A function (see above) that assigns weights to valid dihyperedges; default assigns
+    uniform weights to all dihyperedges
+* `vselect` : A function (see above) that assigns weights to valid vertices; default assigns
+    uniform weights to all vertices
+* `reverse` : If `true` (default `false`), the walk will go along dihyperedges from head to tail,
+    rather than from tail to head
+
+**Returns**
+
+A selected vertex index
+
 """
 function SimpleHypergraphs.random_walk(
         h::H, start::Int;
@@ -61,10 +112,19 @@ end
 """
     get_weakly_connected_components(h::H) where {H <: AbstractDirectedHypergraph}
 
-Return an array of weakly connected components in the directed hypergraph `h`
-(array of vectors of vertices) by first converting the directed hypergraph
-into an undirected hypergraph and then obtaining the conected components of
+Return an array of weakly connected components in the dihypergraph `h` by first converting the
+dihypergraph into an undirected hypergraph and then obtaining the conected components of
 that hypergraph.
+
+**Arguments**
+
+* `h` : Dihypergraph
+
+**Returns**
+
+A vector where each member is itself a vector consisting of the indices of one weakly connected
+component
+
 """
 function get_weakly_connected_components(h::H) where {H <: AbstractDirectedHypergraph}
     undirected = to_undirected(h)
@@ -78,6 +138,16 @@ end
 Determines the B-connected component of a vertex `v` in directed hypergraph `h`.
 This is an auxiliary function for `get_strongly_connected_components`, which
 determines the strongly connected components of a directed hypergraph.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `v` : Vertex index
+
+**Returns**
+
+The B-connected component containing `v` (a `Set{Int}` containing vertex indices)
+
 """
 function _visit(
         h::H,
@@ -121,9 +191,17 @@ end
 """
     get_strongly_connected_components(h::H) where {H <: AbstractDirectedHypergraph}
 
-Return an array of strongly connected components in the directed hypergraph `h`
-(array of vectors of vertices), based on the "naive" algorithm of
-Francisco José Martín-Recuerda Moyano (PhD dissertation, 2016).
+Return an array of strongly connected components in the dihypergraph `h`, based on the "naive"
+algorithm of Francisco José Martín-Recuerda Moyano (PhD dissertation, 2016).
+
+**Arguments**
+
+* `h` : Dihypergraph
+
+**Returns**
+
+A vector, where each member of the vector is itself a (sorted) vector containing the vertex indices
+of one strongly connected component of `h`
 
 """
 function get_strongly_connected_components(h::H) where {H <: AbstractDirectedHypergraph}
@@ -148,9 +226,17 @@ end
 """
     is_connected(h::H) where {H <: AbstractDirectedHypergraph}
 
-A directed hypergraph is *connected* if it has exactly one connected component.
+A directed hypergraph is *connected* if it has exactly one connected component. See
+`get_weakly_connected_components`.
 
-See `get_weakly_connected_components`.
+**Arguments**
+
+* `h` : Dihypergraph
+
+**Returns**
+
+A `Bool`; `true` if `h` is (weakly) connected, and `false` otherwise
+
 """
 function is_connected(h::H) where {H <: AbstractDirectedHypergraph}
     return length(get_weakly_connected_components(h)) == 1
@@ -160,8 +246,16 @@ end
     is_strongly_connected(h::H) where {H <: AbsctractDirectedHypergraphs}
 
 A directed hypergraph is *strongly connected* if it has exactly one strongly connected component.
-
 See `get_strongly_connected_components`.
+
+**Arguments**
+
+* `h` : Dihypergraph
+
+**Returns**
+
+A `Bool`; `true` if `h` is strongly connected, and `false` otherwise
+
 """
 function is_strongly_connected(h::H) where {H <: AbstractDirectedHypergraph}
     return length(get_strongly_connected_components(h)) == 1
