@@ -1,12 +1,14 @@
 """
     DirectedHypergraph{T} <: AbstractDirectedHypergraph{Tuple{Union{T, Nothing}, Union{T, Nothing}}}
 
-A directed hypergraph storing information about vertices and hyperedges.
+A directed hypergraph (dihypergraph) storing information about vertices and directed hyperedges
+(dihyperedges).
 
 This implementation is based on guidance from Przemysław Szufel;
     see https://github.com/pszufe/SimpleHypergraphs.jl/issues/45
-This allows us to manipulate DirectedHypergraphs using Hypergraph functionality
+This allows us to manipulate `DirectedHypergraphs` using `Hypergraph` functionality
 There is danger of a user manipulating individual `hg_tail` and `hg_head` (undirected) hypergraphs
+
 Is there a smart way to prevent this?
 TODO: reconsider this design choice
 
@@ -23,12 +25,12 @@ TODO: reconsider this design choice
     DirectedHypergraph{T}(n::Integer, k::Integer) where {T<:Real}
     DirectedHypergraph(n::Integer, k::Integer)
 
-Construct a hypergraph with a given number of vertices and hyperedges.
+Construct a dihypergraph with a given number of vertices and hyperedges.
 Optionally, values of type `V` can be stored at vertices and values of type `E`
-can be stored at hyperedges. By default the hypergraph uses a `Dict{Int,T}` for
-the internal data storage, however a different dictionary such as `SortedDict`
+can be stored at hyperedges. By default the dihypergraph uses a `Dict{Int,T}` for
+the internal data storage; however, a different dictionary such as `SortedDict`
 to ensure result replicability can be used (e.g., when doing stochastic
-simulations on directed hypergraphs).
+simulations on dihypergraphs).
 
     DirectedHypergraph(
         m_tail::AbstractMatrix{Union{T, Nothing}},
@@ -64,19 +66,16 @@ simulations on directed hypergraphs).
         he_meta_head::Vector{Union{Nothing,E}}=Vector{Union{Nothing,E}}(nothing, size(m,2))
     ) where {T<:Real,V,E,D<:AbstractDict{Int,T}}
 
-Construct a directed hypergraph using its matrix representation.
-In the matrix representation rows are vertices and columns are hyperedges.
-Optionally, values of type `V` can be stored at vertices and values of type `E`
-can be stored at hyperedges. By default the hypergraph uses a `Dict{Int,T}` for
-the internal data storage, however a different dictionary such as `SortedDict`
-to ensure result replicability can be used (e.g. when doing stochastic
-simulations on hypergraphs).
+Construct a dihypergraph using its matrix representation. In the matrix representation rows are
+vertices and columns are hyperedges. Optionally, values of type `V` can be stored at vertices and
+values of type `E` can be stored at hyperedges. By default the hypergraph uses a `Dict{Int,T}` for
+the internal data storage, however a different dictionary such as `SortedDict` to ensure result
+replicability can be used (e.g. when doing stochastic simulations on dihypergraphs).
 
     DirectedHypergraph(g::Graphs.DiGraph)
 
-Constructs a directed hypergraph of degree 2 by making a deep copy of a
-Graphs.DiGraph. A `SortedDict` will be used for internal data storage of the
-hypergraph.
+Constructs a dihypergraph of degree 2 by making a deep copy of a `Graphs.DiGraph`. A `SortedDict`
+will be used for internal data storage of the dihypergraph.
 
     DirectedHypergraph(
         hg_tail::Hypergraph{T},
@@ -106,17 +105,16 @@ hypergraph.
         he_meta_head::Vector{Union{Nothing,E}}=Vector{Union{Nothing,E}}(nothing, size(hg_tail,2))
     ) where {T<:Real,V,E,D<:AbstractDict{Int, T}}
 
-Constructs a directed hypergraph from two undirected basic hypergraphs, one with hyperedges
-containing "tail" vertices and one with hyperedges containing "head"
-verticies.
+Constructs a dihypergraph from two undirected hypergraphs, one with hyperedges containing "tail"
+vertices and one with hyperedges containing "head" verticies.
 
     DirectedHypergraph{T,V,E,D}(
         hg_tail::Hypergraph{T,V,E,D},
         hg_head::Hypergraph{T,V,E,D}
     ) where {T<:Real,V,E,D<:AbstractDict{Int, T}}
 
-Constructs a directed hypergraph from two hypergraphs potentially containing metadata. Throws
-an error if the vertex metadata of the two hypergraphs is not element-for-element identical.
+Constructs a dihypergraph from two hypergraphs potentially containing metadata. Throws an error if
+the vertex metadata of the two hypergraphs is not element-for-element identical.
 
 **Arguments**
 
@@ -132,6 +130,7 @@ an error if the vertex metadata of the two hypergraphs is not element-for-elemen
     the directed hypergraph
 * `hg_head`: an undirected hypergraph representing the head half of
     the directed hypergraph
+
 """
 struct DirectedHypergraph{T <: Real, V, E, D <: AbstractDict{Int, T}} <: AbstractDirectedHypergraph{Tuple{Union{T, Nothing}, Union{T, Nothing}}}
     hg_tail::Hypergraph{T, Nothing, Nothing, D}
@@ -421,8 +420,18 @@ end
 """
     Base.getindex(h::H, idx::Vararg{Int,2}) where {H <: AbstractDirectedHypergraph}
 
-Returns a value for a given vertex-hyperedge pair `idx` for a directed hypergraph `h`.
-If a vertex does not belong to a hyperedge `nothing` is returned.
+Returns a value for a given vertex-dihyperedge pair `idx` for a dihypergraph `h`.
+If a vertex does not belong to a dihyperedge `nothing` is returned.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `idx` : Pair of integers `i` and `j`, where `i` is a vertex index and `j` is a dihyperedge index
+
+**Returns**
+
+`(tail_value, head_value)`, where `tail_value` and `head_value` are either the weight of vertex `i`
+in the tail and head of dihyperedge `j`, respectively, or `nothing` if `i` is not in the tail/head.
 
 """
 @inline function Base.getindex(h::H, idx::Vararg{Int, 2}) where {H <: AbstractDirectedHypergraph}
@@ -438,8 +447,15 @@ end
 """
     Base.setindex!(h::H, ::Nothing, idx::Vararg{Int,2}) where {H <: AbstractDirectedHypergraph}
 
-Removes a vertex from a given hyperedge for a directed hypergraph `h` and a given vertex-hyperedge pair `idx`.
-Note that trying to remove a vertex from a hyperedge when it is not present will not throw an error.
+Removes a vertex from a given hyperedge for a dihypergraph `h` and a given vertex-dihyperedge pair
+`idx`. Note that trying to remove a vertex from a dihyperedge when it is not present will not throw
+an error.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `nothing`
+* `idx` : Pair of integers `i` and `j`, where `i` is a vertex index and `j` is a dihyperedge index
 
 """
 @inline function Base.setindex!(h::H, ::Nothing, idx::Vararg{Int, 2}) where {H <: AbstractDirectedHypergraph}
@@ -457,6 +473,13 @@ end
 Adds a vertex to a hyperedge (represented by indices `idx`) and assigns value
 `v` to be stored with that assignment.
 
+**Arguments**
+
+* `h` : Dihypergraph
+* `v` : A real-valued weight which will be applied to a vertex in both the tail and the head of a
+    dihyperedge
+* `idx` : Pair of integers `i` and `j`, where `i` is a vertex index and `j` is a dihyperedge index
+
 """
 @inline function Base.setindex!(h::H, v::Real, idx::Vararg{Int, 2}) where {H <: AbstractDirectedHypergraph}
     @boundscheck checkbounds(h.hg_tail, idx...)
@@ -471,13 +494,22 @@ end
 """
     Base.setindex!(h::H, v::Tuple{Union{Real, Nothing}, Union{Real, Nothing}}, idx::Vararg{Int,2}) where {H <: AbstractDirectedHypergraph}
 
-Manipulates a hyperedge (represented by indices `idx`), either adding a vertex to the 
-ingoing and/or head sides of the hyperedge and assigning a value associated with that assignment,
-or else removing a vertex from the ingoing/head sides of the hyperedge.
+Manipulates a dihyperedge (represented by indices `idx`), either adding a vertex to the tail and/or
+head sides of the hyperedge and assigning a value associated with that assignment, or else removing
+a vertex from the tail/head sides of the hyperedge.
 
-Here, `v` is a 2-tuple where the first element is the value that will be assigned to the ingoing part of the hyperedge
-and the second element is the value that will be assigned to the head part. A value of `nothing` means that the
-vertex will be removed from that side of the hyperedge.
+Here, `v` is a 2-tuple where the first element is the value that will be assigned to the tail part
+of the hyperedge and the second element is the value that will be assigned to the head part. A
+value of `nothing` means that the vertex will be removed from that side of the hyperedge.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `v` : A 2-tuple `(tail_value, head_value)`. `tail_value` and `head_value` are either `nothing`
+    (in which case the vertex is not in the tail or head, respectively, of the dihyperedge) or
+    real-valued weights which will be applied to a vertex in the tail and head of a dihyperedge,
+    respectively
+* `idx` : Pair of integers `i` and `j`, where `i` is a vertex index and `j` is a dihyperedge index
 
 """
 @inline function Base.setindex!(h::H, v::Tuple{Union{Real, Nothing}, Union{Real, Nothing}}, idx::Vararg{Int, 2}) where {H <: AbstractDirectedHypergraph}
@@ -494,10 +526,17 @@ end
 """
     Base.setindex!(h::H, ::Nothing, idx::Vararg{Int,3}) where {H <: AbstractDirectedHypergraph}
 
-Removes a vertex from a given hyperedge for a directed hypergraph `h` and a given side-vertex-hyperedge pair `idx`.
-If the first index of `idx` is 1, then the vertex will be removed from the tail hyperedge; if `idx` is 2, then
-the vertex will be removed from the head hyperedge. 
-Note that trying to remove a vertex from a hyperedge when it is not present will not throw an error.
+Removes a vertex from a given hyperedge for a dihypergraph `h` and a given side-vertex-dihyperedge
+triple `idx`. If the first index of `idx` is 1, then the vertex will be removed from the tail of
+the dihyperedge; if `idx` is 2, then the vertex will be removed from the head. Note that trying to
+remove a vertex from a hyperedge when it is not present will not throw an error.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `nothing`
+* `idx` : Three-tuple of integers `side`, `i, and `j`, where `side` is either `1` (meaning "tail")
+    or `2` (meaning "head"), `i` is a vertex index, and `j` is a dihyperedge index
 
 """
 @inline function Base.setindex!(h::H, ::Nothing, idx::Vararg{Int, 3}) where {H <: AbstractDirectedHypergraph}
@@ -520,9 +559,16 @@ end
 """
     Base.setindex!(h::H, v::Real, idx::Vararg{Int,3}) where {H <: AbstractDirectedHypergraph}
 
-Adds a vertex to a hyperedge (represented by indices `idx`, where the first index must be either
-1 - referring to an tail hyperedge - or 2 - referring to an head hyperedge) and assigns value
+Adds a vertex to a dihyperedge (represented by indices `idx`, where the first index must be either
+`1` - referring to the tail of the dihyperedge - or `2` - referring to the head) and assigns value
 `v` to be stored with that assignment.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `v` : A real-valued weight
+* `idx` : 3-tuple of integers `side`, `i`, and `j`, where `side` is either `1` ("tail") or `2`
+    ("head"), `i` is a vertex index, and `j` is a dihyperedge index
 
 """
 @inline function Base.setindex!(h::H, v::Real, idx::Vararg{Int, 3}) where {H <: AbstractDirectedHypergraph}
@@ -545,9 +591,20 @@ end
 """
     getvertices(h::H, he_id::Int) where {H <: AbstractDirectedHypergraph}
 
-Returns vertices from a directed hypergraph `a` for a given hyperedge `he_id`.
-Vertex indices are given in a tuple `(in, out)`, where `in` are the tail vertices
-and `out` are the head vertices
+Returns vertices (with associated weights) from a directed hypergraph `h` for a given hyperedge
+with index `he_id`.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `he_id` : Dihyperedge index
+
+**Returns**
+
+2-tuple `(in, out)`, where `in` contains information about the dihyperedge's tail and `out`
+contains information about the head. `in` and `out` are both `AbstractDict`s (following the dict
+(`D`) type in `h`), with the form `D(v => w)`, where `v` is a vertex index and `w` is a real-valued
+weight.
 
 """
 @inline SimpleHypergraphs.getvertices(h::H, he_id::Int) where {H <: AbstractDirectedHypergraph} = (h.hg_tail.he2v[he_id], h.hg_head.he2v[he_id])
@@ -556,29 +613,47 @@ and `out` are the head vertices
 """
     gethyperedges(h::H, v_id::Int) where {H <: AbstractDirectedHypergraph}
 
-Returns hyperedges for a given vertex `v_id` in a directed hypergraph `h`.
-Hyperedge indices are given in a tuple `(tail, head)`, where `tail` are the hyperedges where
-vertex `v_ind` is on the tail side and `head` are the hyperedges where `v_ind` is on
-the head side.
+Returns dihyperedges (with associated weights) for a given vertex `v_id` in a dihypergraph `h`.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `v_id` : Vertex index
+
+**Returns**
+
+2-tuple `(in, out)`, where `in` contains information about the dihyperedges where vertex `v_id` is
+in the tail and `out` contains information about the dihyperedges where `v_id` is in the head. `in`
+and `out` are both `AbstractDict`s (following the dict (`D`) type in `h`), with the form
+`D(he => w)`, where `he` is a dihyperedge index and `w` is a real-valued weight.
 
 """
 @inline SimpleHypergraphs.gethyperedges(h::H, v_id::Int) where {H <: AbstractDirectedHypergraph} = (h.hg_tail.v2he[v_id], h.hg_head.v2he[v_id])
 
 """
-    to_undirected(h::DirectedHypergraph)
+    to_undirected(
+	h::DirectedHypergraph{T, V, E, D}
+    ) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
 
-Converts a directed hypergraph into an undirected hypergraph.
-Tail and head hyperedges are combined; that is, for all hyperedges he_orig in
-the directed hypergraph h, all vertices in the head or tail are added to a
-corresponding undirected hyperedge he_new in the undirected hypergraph h'.
+Converts a dihypergraph into an undirected hypergraph. Dihyperedge tails and heads are combined;
+that is, for all dihyperedges `he_orig = (tail, head)` in the dihypergraph `h`, all vertices in
+`tail` or `head` are added to a corresponding undirected hyperedge `he_new` in the undirected
+hypergraph `h'`.
 
-Metadata is combined into tuples; i.e., if there was originally tail metadata
-t_meta and head metadata h_meta for a given directed hyperedge, the new
-undirected hyperedge will have metadata (t_meta, h_meta).
+Metadata is combined into tuples; i.e., if there was originally tail metadata `t_meta` and head
+metadata `h_meta` for a given dihyperedge `he_orig`, the new hyperedge `he_new` will have metadata
+`(t_meta, h_meta)`.
 
-Because vertex-hyperedge weights are restricted to real numbers, we cannot
-combine the weights, so we simply set the values to 1.0 if a given vertex
-is in a given hyperedge 
+Because vertex-hyperedge weights are restricted to real numbers, we cannot combine the weights, so
+we simply set the values to 1.0 if a given vertex is in a given hyperedge.
+
+**Arguments**
+
+* `h` : Dihypergraph
+
+**Returns**
+
+An undirected hypergraph `h'`
 
 """
 function to_undirected(h::DirectedHypergraph{T, V, E, D}) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
@@ -619,39 +694,50 @@ end
 
 
 """
-    add_vertex!(h::DirectedHypergraph{T, V, E, D};
-                hyperedges_tail::D = D(), hyperedges_head::D = D(), v_meta::Union{V,Nothing} = nothing
-                ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
+    add_vertex!(
+	h::DirectedHypergraph{T, V, E, D};
+        dihyperedges_tail::D = D(),
+	dihyperedges_head::D = D(),
+	v_meta::Union{V,Nothing} = nothing
+    ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
 
-Adds a vertex to a given directed hypergraph `h`. Optionally, the vertex can be added
-to existing hyperedges. The `hyperedges_tail` parameter presents a dictionary
-of hyperedge identifiers and values stored at the ingoing side of hyperedges, and
-the `hyperedges_head` parameter presents a dictionary of hyperedge identifiers and
-values stored at the head side of hyperedges.
-Additionally, a value can be stored with the vertex using the `v_meta` keyword
-parameter.
+Adds a vertex to a given dihypergraph `h`. Optionally, the vertex can be added to existing
+hyperedges. The `dihyperedges_tail` parameter presents a dictionary of hyperedge indices and weights
+stored at tail side of dihyperedges, and the `dihyperedges_head` parameter presents a dictionary of
+hyperedge identifiers and weights stored at the head side of dihyperedges. Additionally, a value
+can be stored with the vertex using the `v_meta` keyword parameter.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `dihyperedges_tail` : Dihyperedge index-weight dictionary with information about the dihyperedges
+    where the new vertex will be in the tail; default is an empty dict of type `D`
+* `dihyperedges_head` : Dihyperedge index-weight dictionary with information about the dihyperedges
+    where the new vertex will be in the head; default is an empty dict of type `D`
+* `v_meta` : (Optional) metadata for the new vertex; default is `nothing`
 
 """
 function SimpleHypergraphs.add_vertex!(
         h::DirectedHypergraph{T, V, E, D};
-        hyperedges_tail::D = D(), hyperedges_head::D = D(),
+        dihyperedges_tail::D = D(),
+	dihyperedges_head::D = D(),
         v_meta::Union{V, Nothing} = nothing
     ) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
-    @boundscheck (checkbounds(h.hg_tail, 1, k) for k in keys(hyperedges_tail))
-    @boundscheck (checkbounds(h.hg_head, 1, k) for k in keys(hyperedges_head))
+    @boundscheck (checkbounds(h.hg_tail, 1, k) for k in keys(dihyperedges_tail))
+    @boundscheck (checkbounds(h.hg_head, 1, k) for k in keys(dihyperedges_head))
 
-    push!(h.hg_tail.v2he, hyperedges_tail)
-    push!(h.hg_head.v2he, hyperedges_head)
+    push!(h.hg_tail.v2he, dihyperedges_tail)
+    push!(h.hg_head.v2he, dihyperedges_head)
 
     # Should always be identical to h.hg_head.v2he
     ix = length(h.hg_tail.v2he)
 
-    for k in keys(hyperedges_tail)
-        h[1, ix, k] = hyperedges_tail[k]
+    for k in keys(dihyperedges_tail)
+        h[1, ix, k] = dihyperedges_tail[k]
     end
 
-    for k in keys(hyperedges_head)
-        h[2, ix, k] = hyperedges_head[k]
+    for k in keys(dihyperedges_head)
+        h[2, ix, k] = dihyperedges_head[k]
     end
 
     push!(h.v_meta, v_meta)
@@ -661,10 +747,15 @@ end
 """
     remove_vertex!(h::DirectedHypergraph, v::Int)
 
-Removes the vertex `v` from a given directed hypergraph `h`.
-Note that running this function will cause reordering of vertices in the
-hypergraph; the vertex `v` will replaced by the last vertex of the hypergraph
-and the list of vertices will be shrunk.
+Removes the vertex `v` from a given dihypergraph `h`. Note that running this function will cause
+reordering of vertices in the dihypergraph; the vertex `v` will replaced by the last vertex of the
+dihypergraph and the list of vertices will be shrunk.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `v` : Vertex index
+
 """
 function SimpleHypergraphs.remove_vertex!(h::DirectedHypergraph, v::Int)
     n = nhv(h)
@@ -705,19 +796,29 @@ end
 
 
 """
-    add_hyperedge!(h::DirectedHypergraph{T, V, E, D};
-                   vertices_tail::D = D(), vertices_head::D = D(),
-                   he_meta_tail::Union{E,Nothing}=nothing, he_meta_head::Union{E,Nothing}=nothing
-                   ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
+    add_hyperedge!(
+	h::DirectedHypergraph{T, V, E, D};
+        vertices_tail::D = D(),
+	vertices_head::D = D(),
+        he_meta_tail::Union{E,Nothing}=nothing,
+	he_meta_head::Union{E,Nothing}=nothing
+    ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
 
-Adds a hyperedge to a given directed hypergraph `h`.
-Optionally, existing vertices can be added to the created hyperedge in the
-tail or head directions.
-The paramater `vertices_tail` represents a dictionary of vertex identifiers and
-values stored at the tail hyperedge; `vertices_head` represented the vertex
-identifiers and values stored at the outcoming side of the hyperedge. Additionally, 
-a value can be stored with the hyperedge using the `he_meta_tail` and `he_meta_head`
-keyword parameters.
+Adds a dihyperedge to a given dihypergraph `h`. Optionally, existing vertices can be added to the
+created dihyperedge in the tail and/or head sides. The paramater `vertices_tail` represents a
+dictionary of vertex indices and weights for the tail of the dihyperedge; `vertices_head`
+represents the vertex indices and values for the head of the dihyperedge. Additionally, metadata
+can be stored with the hyperedge using the `he_meta_tail` and `he_meta_head` keyword arguments.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `vertices_tail` : Vertex index-weight dictionary with information about the vertices in the new
+    dihyperedge's tail; default is an empty dict of type `D`
+* `vertices_head` : Vertex index-weight dictionary with information about the vertices in the new
+    dihyperedge's head; default is an empty dict of type `D`
+* `he_meta_tail` : (Optional) metadata for the new dihyperedge's tail; default is `nothing`
+* `he_meta_head` : (Optional) metadata for the new dihyperedge's head; default is `nothing`
 
 """
 function SimpleHypergraphs.add_hyperedge!(
@@ -749,10 +850,16 @@ end
 
 """
     remove_hyperedge!(h::DirectedHypergraph, e::Int)
-Removes the hyperedge `e` from a given directed hypergraph `h`.
-Note that running this function will cause reordering of hyperedges in the
-hypergraph: the hyperedge `e` will replaced by the last hyperedge of the hypergraph
-and the list of hyperedges (and hyperedge metadata) will be shrunk.
+
+Removes the dihyperedge `e` from a given dihypergraph `h`. Note that running this function will
+cause reordering of hyperedges in the dihypergraph: the dihyperedge `e` will replaced by the last
+dihyperedge of the dihypergraph and the list of dihyperedges (and dihyperedge metadata) will be shrunk.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `e` : Dihyperedge index
+
 """
 function SimpleHypergraphs.remove_hyperedge!(h::DirectedHypergraph, e::Int)
     ne = nhe(h)
@@ -800,6 +907,10 @@ end
 
 Remove all vertices with degree 0 and all hyperedges of size 0.
 
+**Arguments**
+
+* `h` : Dihypergraph
+
 """
 function SimpleHypergraphs.prune_hypergraph!(h::H) where {H <: AbstractDirectedHypergraph}
     for e in reverse(1:nhe(h))
@@ -816,24 +927,42 @@ end
 
 Remove all vertices with degree 0 and all hyperedges of size 0.
 
+**Arguments**
+
+* `h` : Dihypergraph
+
+**Returns**
+
+A deepcopy of `h` with all isolated vertices and empty dihyperedges removed
+
 """
 function SimpleHypergraphs.prune_hypergraph(h::H) where {H <: AbstractDirectedHypergraph}
     return prune_hypergraph!(deepcopy(h))
 end
 
 """
-    set_vertex_meta!(h::DirectedHypergraph{T, V, E, D}, new_value::Union{V,Nothing},
-        id::Int) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
+    set_vertex_meta!(
+	h::DirectedHypergraph{T, V, E, D},
+	new_value::Union{V,Nothing},
+        v::Int
+    ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
 
-Sets a new meta value `new_value` for the vertex `id` in the hypergraph `h`.
+Sets a new metadata value `new_value` for the vertex `v` in the dihypergraph `h`.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `new_value` : Metadata to replace existing metadata
+* `v` : Vertex index 
 
 """
 function SimpleHypergraphs.set_vertex_meta!(
         h::DirectedHypergraph{T, V, E, D},
-        new_value::Union{V, Nothing}, id::Int
+        new_value::Union{V, Nothing},
+	v::Int
     ) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
-    checkbounds(h.v_meta, id)
-    h.v_meta[id] = new_value
+    checkbounds(h.v_meta, v)
+    h.v_meta[v] = new_value
     return h.v_meta
 end
 
@@ -848,7 +977,7 @@ Returns a meta value stored at the vertex `id` in the directed hypergraph `h`.
 function SimpleHypergraphs.get_vertex_meta(
         h::DirectedHypergraph{T, V, E, D}, id::Int
     ) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
-    checkbounds(h.v_meta, id)
+    @boundscheck checkbounds(h.v_meta, id)
     return h.v_meta[id]
 end
 
@@ -865,8 +994,8 @@ function SimpleHypergraphs.set_hyperedge_meta!(
         h::DirectedHypergraph{T, V, E, D},
         new_value_tail::Union{E, Nothing}, new_value_head::Union{E, Nothing}, id::Int
     ) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
-    checkbounds(h.he_meta_tail, id)
-    checkbounds(h.he_meta_head, id)
+    @boundscheck checkbounds(h.he_meta_tail, id)
+    @boundscheck checkbounds(h.he_meta_head, id)
 
     h.he_meta_tail[id] = new_value_tail
     h.he_meta_head[id] = new_value_head

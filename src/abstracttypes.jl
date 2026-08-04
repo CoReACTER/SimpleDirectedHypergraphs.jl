@@ -1,7 +1,7 @@
 """
-    AbstractDirectedHypergraph{T} <: AbstractSimpleHypergraph{T}
+    AbstractDirectedHypergraph{T} <: AbstractHypergraph{T}
 
-An abstract directed hypergraph type storing information about vertices and hyperedges.
+An abstract directed hypergraph type storing information about vertices and dihyperedges.
 """
 abstract type AbstractDirectedHypergraph{T} <: AbstractHypergraph{T} end
 

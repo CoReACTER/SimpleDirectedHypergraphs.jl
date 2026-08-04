@@ -2,7 +2,7 @@
 
 ![The SimpleDirectedHypergraphs.jl logo: above the package name (written in black font) is a directed hypergraph, with vertices represented by filled circles (one blue, one red, one green, one purple, and four gray) and directed hyperedges represented by curved multi-tailed/multi-headed arrows (one black, connecting the red and blue vertices on the tail end with the purple and green vertices on the head end; and three gray with dashes lines). The blue vertex replaces the 'i' in "Simple", and the purple vertex replaces the 'i' in "Directed".](./assets/sdhg_logo_whitebackground.png)
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://coreacter.codeberg.page/SimpleDirectedHypergraphs.jl/@main)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://coreacter.codeberg.page/SimpleDirectedHypergraphs.jl)
 [![Build Status](https://ci.codeberg.org/api/badges/15645/status.svg)](https://ci.codeberg.org/repos/15645)
 [![Code Style: runic](https://img.shields.io/badge/code_style-%E1%9A%B1%E1%9A%A2%E1%9A%BE%E1%9B%81%E1%9A%B2-black)](https://github.com/fredrikekre/Runic.jl)
 
