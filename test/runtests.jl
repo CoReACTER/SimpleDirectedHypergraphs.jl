@@ -739,7 +739,7 @@ end;
             @test is_reachable(dh2, i, j, :vertex)
         end
         for e in 1:nhe(dh2)
-            @test is_reachable(dh2, i, e, :hyperedge)
+            @test is_reachable(dh2, i, e, :dihyperedge)
         end
     end
     @test_throws AssertionError is_reachable(dh2, 1, 2, :test)

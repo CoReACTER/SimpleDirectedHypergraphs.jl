@@ -30,7 +30,7 @@ function forward_reachable(
     reached_vs = BitVector(falses(nhv(h)))
     reached_vs[source] = true
 
-    hes_tail_count = length.(keys.(h.h_tail.he2v))
+    hes_tail_count = length.(keys.(h.hg_tail.he2v))
 
     # Which vertices/hyperedges have been reached?
     vs = Set{Int}()
@@ -40,14 +40,14 @@ function forward_reachable(
         v = dequeue!(Q)
         push!(vs, v)
 
-        for out_e in keys(h.h_tail.v2he[v])
+        for out_e in keys(h.hg_tail.v2he[v])
             # Following pseudocode exactly. This feels awkward; how slow would it be to just query reached_vs?
             hes_tail_count[out_e] -= 1
 
             if hes_tail_count[out_e] == 0
                 push!(es, out_e)
 
-                for w in keys(h.h_head.he2v[out_e])
+                for w in keys(h.hg_head.he2v[out_e])
                     if !reached_vs[w]
                         enqueue!(Q, w)
                         reached_vs[w] = true
@@ -103,12 +103,12 @@ function backward_traceable(
         v = dequeue!(Q)
         push!(vs, v)
 
-        for in_e in keys(h.h_head.v2he[v])
+        for in_e in keys(h.hg_head.v2he[v])
             if !marked_hes[in_e]
                 push!(es, in_e)
                 marked_hes[in_e] = true
 
-                for w in keys(h.h_tail.he2v[in_e])
+                for w in keys(h.hg_tail.he2v[in_e])
                     if !reached_vs[w]
                         enqueue!(Q, w)
                         reached_vs[w] = true
@@ -191,7 +191,7 @@ function shortest_hyperpath_kk_heuristic(
     removed_hes = BitVector(falses(nhe(h)))
 
     hyperedge_inedges = [Set{Int}() for _ in 1:nhe(h)]
-    hes_tail_count = length.(keys.(h.h_tail.he2v))
+    hes_tail_count = length.(keys.(h.hg_tail.he2v))
 
     hyperedge_costs = fill(typemax(T), nhe(h))
 
@@ -213,14 +213,14 @@ function shortest_hyperpath_kk_heuristic(
 
     # Eliminate non-doubly reachable dihyperedges
     h_copy = deepcopy(h)
-    h_copy.h_tail[:, InvertedIndices.Not(dr_hes)] .= nothing
-    h_copy.h_head[:, InvertedIndices.Not(dr_hes)] .= nothing
+    h_copy.hg_tail[:, InvertedIndices.Not(dr_hes)] .= nothing
+    h_copy.hg_head[:, InvertedIndices.Not(dr_hes)] .= nothing
 
     # Min-heap for dihyperedges
     Hmin = MutableBinaryMinHeap{Tuple{T, Int}}()
-    for out_e in keys(h.h_tail.v2he[source])
+    for out_e in keys(h.hg_tail.v2he[source])
         # If only the source is needed for this dihyperedge
-        if length(h.h_tail.he2v[out_e]) == 1
+        if length(h.hg_tail.he2v[out_e]) == 1
             hyperedge_heap_points[out_e] = push!(Hmin, (dihyperedge_weights[out_e], out_e))
         end
     end
@@ -233,8 +233,8 @@ function shortest_hyperpath_kk_heuristic(
         hyperedge_costs[e] = sum(dihyperedge_weights[x] for x in path)
 
         out_edges = Set{Int}()
-        for v in keys(h.h_head.he2v[e])
-            for f in keys(h.h_tail.v2he[v])
+        for v in keys(h.hg_head.he2v[e])
+            for f in keys(h.hg_tail.v2he[v])
                 if !marked_hes[f]
                     if !reached_vs[v]
                         hes_tail_count[f] -= 1
@@ -284,7 +284,7 @@ function shortest_hyperpath_kk_heuristic(
 
     path = Set{Int}()
     cost = typemax(T)
-    for in_e in keys(h.h_head.v2he[target])
+    for in_e in keys(h.hg_head.v2he[target])
         if !isnothing(hyperedge_heap_points[in_e])
             p = short_hyperpath_vhe(h, source, in_e, hyperedge_inedges, hyperedge_costs)
             cost_p = sum(dihyperedge_weights[e] for e in p)
@@ -454,16 +454,16 @@ function short_hyperpath_vhe(
     superpath = sort(collect(superpath), by = x -> he_costs[x], rev = true)
     h_copy = deepcopy(h)
     # Eliminate all dihyperedges not on superpath
-    h_copy.h_tail[:, InvertedIndices.Not(superpath)] .= nothing
-    h_copy.h_head[:, InvertedIndices.Not(superpath)] .= nothing
+    h_copy.hg_tail[:, InvertedIndices.Not(superpath)] .= nothing
+    h_copy.hg_head[:, InvertedIndices.Not(superpath)] .= nothing
 
     # Remove target from superpath; does not make sense to remove target in the next stage
     filter!(x -> x != he, superpath)
 
     # Try to minimize the size of the path by eliminating unnecessary dihyperedges
     for e in superpath
-        h_copy.h_tail[:, e] .= nothing
-        h_copy.h_head[:, e] .= nothing
+        h_copy.hg_tail[:, e] .= nothing
+        h_copy.hg_head[:, e] .= nothing
 
         # Only if dihyperedge is essential for reaching target,
         if !is_reachable(h_copy, v, he, :dihyperedge)
@@ -547,8 +547,8 @@ function get_hyperpath(h::H, source::Int, target::Int, out::Set{Int}) where {H <
     # Remove excluded dihyperedges
     h_copy = deepcopy(h)
     inds = sort(collect(out))
-    h_copy.h_tail[:, inds] .= nothing
-    h_copy.h_head[:, inds] .= nothing
+    h_copy.hg_tail[:, inds] .= nothing
+    h_copy.hg_head[:, inds] .= nothing
 
     reached_vs, reached_es = forward_reachable(h_copy, source)
 
@@ -561,8 +561,8 @@ function get_hyperpath(h::H, source::Int, target::Int, out::Set{Int}) where {H <
 
     # Try to minimize the size of the path by eliminating unnecessary dihyperedges
     for e in reached_es
-        h_copy.h_tail[:, e] .= nothing
-        h_copy.h_head[:, e] .= nothing
+        h_copy.hg_tail[:, e] .= nothing
+        h_copy.hg_head[:, e] .= nothing
 
         # Only retain if dihyperedge is essential for reaching target
         if !is_reachable(h_copy, source, target, :vertex)
@@ -792,20 +792,20 @@ function initialize_ilp_model(
     # Define initial constraints
     for i in 1:nhe(h)
         # Tail-covering inequalities
-        for v in keys(h.h_tail.he2v[i])
+        for v in keys(h.hg_tail.he2v[i])
             if v == source
                 continue
             end
 
-            in_hes = collect(keys(h.h_head.v2he[v]))
+            in_hes = collect(keys(h.hg_head.v2he[v]))
             @JuMP.constraint(model, sum([x[ih] for ih in in_hes]) >= x[i])
         end
 
         # Head-hitting inequalities
-        if target ∉ keys(h.h_head.he2v[i])
+        if target ∉ keys(h.hg_head.he2v[i])
             hits = Int[]
             for j in 1:nhe(h)
-                if i != j && length(intersect(Set(keys(h.h_head.he2v[i])), Set(keys(h.h_tail.he2v[j])))) >= 1
+                if i != j && length(intersect(Set(keys(h.hg_head.he2v[i])), Set(keys(h.hg_tail.he2v[j])))) >= 1
                     push!(hits, j)
                 end
             end
@@ -815,7 +815,7 @@ function initialize_ilp_model(
     end
 
     # Target-production inequality
-    @JuMP.constraint(model, sum([x[e] for e in keys(h.h_head.v2he[target])]) >= 1)
+    @JuMP.constraint(model, sum([x[e] for e in keys(h.hg_head.v2he[target])]) >= 1)
 
     # Distance-based inequalities
     dist_ests = fill(typemax(T), nhv(h))
@@ -844,7 +844,7 @@ function initialize_ilp_model(
         push!(cuts, cut_d)
 
         cross = [
-            issubset(Set(keys(h.h_tail.he2v[i])), cut_d) && !issubset(Set(keys(h.h_head.he2v[i])), cut_d)
+            issubset(Set(keys(h.hg_tail.he2v[i])), cut_d) && !issubset(Set(keys(h.hg_head.he2v[i])), cut_d)
                 for i in 1:nhe(h)
         ]
         push!(crosses, BitVector(cross))
@@ -1092,9 +1092,9 @@ function expand_cuts(
             # If `e` is an active dihyperedge that crosses the current cut, add the head of `e` to the cut so `e` no
             # longer crosses it
             if curr_sol[e] && new_cross[e]
-                new_cut = union(new_cut, Set(keys(h.h_head.he2v[e])))
+                new_cut = union(new_cut, Set(keys(h.hg_head.he2v[e])))
                 new_cross = [
-                    issubset(Set(keys(h.h_tail.he2v[i])), new_cut) && !issubset(Set(keys(h.h_head.he2v[i])), new_cut)
+                    issubset(Set(keys(h.hg_tail.he2v[i])), new_cut) && !issubset(Set(keys(h.hg_head.he2v[i])), new_cut)
                         for i in 1:nhe(h)
                 ]
             end
@@ -1120,11 +1120,11 @@ function expand_cuts(
                     new_cross_ev = Dict{Int, Vector{Bool}}()
                     greedy_v = 0
                     min_length = typemax(Int)
-                    for v in keys(h.h_tail.he2v[e])
+                    for v in keys(h.hg_tail.he2v[e])
                         new_cut_ev[v] = setdiff(new_cut, Set(v))
                         new_cross_ev[v] = [
-                            issubset(Set(keys(h.h_tail.he2v[i])), new_cut_ev[v]) &&
-                                !issubset(Set(keys(h.h_head.he2v[i])), new_cut_ev[v])
+                            issubset(Set(keys(h.hg_tail.he2v[i])), new_cut_ev[v]) &&
+                                !issubset(Set(keys(h.hg_head.he2v[i])), new_cut_ev[v])
                                 for i in 1:nhe(h)
                         ]
                         v_length = length(findall(map(!, old_cross) .&& new_cross_ev[v]))
