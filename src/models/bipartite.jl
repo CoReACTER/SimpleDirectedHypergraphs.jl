@@ -219,7 +219,11 @@ Graphs.is_directed(::Type{BipartiteView{H}}) where {H <: AbstractDirectedHypergr
 
 
 """
-    shortest_path(b::BipartiteView{H}, source::Int, target::Int) where {H<:AbstractDirectedHypergraph}
+    SimpleHypergraphs.shortest_path(
+	b::BipartiteView{H},
+	source::Int,
+	target::Int
+    ) where {H<:AbstractDirectedHypergraph}
 
 Finds a single shortest path in a graph `b` between vertices `source` and `target`. Note that if
 several paths of the same length exist, only one will be returned.
