@@ -1,25 +1,36 @@
 """
     forward_reachable(
-        hg::H,
+        h::H,
         source::Int,
     ) where {H <: AbstractDirectedHypergraph}
 
-    Traverses a hypergraph `hg` starting from vertex with index `source` to determine all other vertices and hyperedges
-    that are reachable, following hyperedges along their forward direction (i.e., from tail to head).
+Traverses a dihypergraph `h` starting from vertex with index `source` to determine all other vertices
+and hyperedges that are reachable, following hyperedges along their forward direction (i.e., from
+tail to head).
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `source` : A vertex index from which to begin the search
+
+**Returns**
+
+`(vs, es)`, where `vs` is a `Set{Int}` of reached vertex indices and `es` is a `Set{Int}` of
+reached dihyperedge indices
 
 """
 function forward_reachable(
-        hg::H,
+        h::H,
         source::Int,
     ) where {H <: AbstractDirectedHypergraph}
     # Priority queue of reached vertices
     Q = Queue{Int}()
     enqueue!(Q, source)
 
-    reached_vs = BitVector(falses(nhv(hg)))
+    reached_vs = BitVector(falses(nhv(h)))
     reached_vs[source] = true
 
-    hes_tail_count = length.(keys.(hg.hg_tail.he2v))
+    hes_tail_count = length.(keys.(h.hg_tail.he2v))
 
     # Which vertices/hyperedges have been reached?
     vs = Set{Int}()
@@ -29,14 +40,14 @@ function forward_reachable(
         v = dequeue!(Q)
         push!(vs, v)
 
-        for out_e in keys(hg.hg_tail.v2he[v])
+        for out_e in keys(h.hg_tail.v2he[v])
             # Following pseudocode exactly. This feels awkward; how slow would it be to just query reached_vs?
             hes_tail_count[out_e] -= 1
 
             if hes_tail_count[out_e] == 0
                 push!(es, out_e)
 
-                for w in keys(hg.hg_head.he2v[out_e])
+                for w in keys(h.hg_head.he2v[out_e])
                     if !reached_vs[w]
                         enqueue!(Q, w)
                         reached_vs[w] = true
@@ -52,25 +63,37 @@ end
 
 """
     backward_traceable(
-        hg::H,
+        h::H,
         target::Int,
     ) where {H <: AbstractDirectedHypergraph}
 
-    Traverses a hypergraph `hg` starting from vertex with index `target` to determine all other vertices and hyperedges
-    that are reachable, following hyperedges along their reverse direction (i.e., from head to tail).
+Traverses a dihypergraph `h` starting from vertex with index `target` to determine all other
+vertices and hyperedges that are reachable, following hyperedges along their reverse direction
+(i.e., from head to tail).
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `source` : A vertex index from which to begin the search
+
+**Returns**
+
+`(vs, es)`, where `vs` is a `Set{Int}` of reached vertex indices and `es` is a `Set{Int}` of
+reached dihyperedge indices
+
 """
 function backward_traceable(
-        hg::H,
+        h::H,
         target::Int,
     ) where {H <: AbstractDirectedHypergraph}
     # Priority queue of reached vertices
     Q = Queue{Int}()
     enqueue!(Q, target)
 
-    reached_vs = BitVector(falses(nhv(hg)))
+    reached_vs = BitVector(falses(nhv(h)))
     reached_vs[target] = true
 
-    marked_hes = BitVector(falses(nhe(hg)))
+    marked_hes = BitVector(falses(nhe(h)))
 
     # Which vertices/hyperedges have been reached?
     vs = Set{Int}()
@@ -80,12 +103,12 @@ function backward_traceable(
         v = dequeue!(Q)
         push!(vs, v)
 
-        for in_e in keys(hg.hg_head.v2he[v])
+        for in_e in keys(h.hg_head.v2he[v])
             if !marked_hes[in_e]
                 push!(es, in_e)
                 marked_hes[in_e] = true
 
-                for w in keys(hg.hg_tail.he2v[in_e])
+                for w in keys(h.hg_tail.he2v[in_e])
                     if !reached_vs[w]
                         enqueue!(Q, w)
                         reached_vs[w] = true
@@ -129,16 +152,19 @@ end
         hyperedge_weights::AbstractVector{T}
     ) where {T <: Real, V, E, D <: AbstractDict{Int,T}}
 
-    Implements the heuristic directed hypergraph pathfinding algorithm of Krieger & Kececioglu (2022),
-    DOI: 10.1186/s13015-022-00217-9. This algorithm is not guaranteed to find the optimal pathway from `source` to
-    `target` based on some nonnegative `hyperedge_weights`), but in practice, it produces the optimal pathway
-    approximately 99% of the time.
+Implements the heuristic directed hypergraph pathfinding algorithm of Krieger & Kececioglu (2022),
+DOI: 10.1186/s13015-022-00217-9. This algorithm is not guaranteed to find the optimal pathway from `source` to
+`target` based on some nonnegative `hyperedge_weights`), but in practice, it produces the optimal pathway
+approximately 99% of the time.
     
-    Note that, ostensibly, this algorithm only works for single-source, single-sink pathfinding (i.e., with a single
-    `source` and a single `target`). If the user provides multiple `sources` and/or multiple `targets`, the
-    multi-source/multi-sink problem will be reformulated as a single-source, single-sink problem by adding a
-    *metasource* vertex (connected to all source vertices by a single, 0-cost hyperedge) and/or *metatarget* vertex
-    (connected to all target vertices by a single, 0-cost hyperedge).
+Note that, ostensibly, this algorithm only works for single-source, single-sink pathfinding (i.e., with a single
+`source` and a single `target`). If the user provides multiple `sources` and/or multiple `targets`, the
+multi-source/multi-sink problem will be reformulated as a single-source, single-sink problem by adding a
+*metasource* vertex (connected to all source vertices by a single, 0-cost hyperedge) and/or *metatarget* vertex
+(connected to all target vertices by a single, 0-cost hyperedge).
+
+
+
 """
 function shortest_hyperpath_kk_heuristic(
         hg::H,

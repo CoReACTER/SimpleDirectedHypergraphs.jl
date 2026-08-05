@@ -744,7 +744,7 @@ can be stored with the vertex using the `v_meta` keyword parameter.
 function SimpleHypergraphs.add_vertex!(
         h::DirectedHypergraph{T, V, E, D};
         dihyperedges_tail::D = D(),
-	dihyperedges_head::D = D(),
+        dihyperedges_head::D = D(),
         v_meta::Union{V, Nothing} = nothing
     ) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
     @boundscheck (checkbounds(h.hg_tail, 1, k) for k in keys(dihyperedges_tail))
@@ -1003,7 +1003,7 @@ Sets a new metadata value `new_value` for the vertex `v` in the dihypergraph `h`
 function SimpleHypergraphs.set_vertex_meta!(
         h::DirectedHypergraph{T, V, E, D},
         new_value::Union{V, Nothing},
-	v::Int
+        v::Int
     ) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
     checkbounds(h.v_meta, v)
     h.v_meta[v] = new_value
@@ -1031,7 +1031,7 @@ Vertex metadata at index `v`
 """
 function SimpleHypergraphs.get_vertex_meta(
         h::DirectedHypergraph{T, V, E, D},
-	v::Int
+        v::Int
     ) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
     @boundscheck checkbounds(h.v_meta, v)
     return h.v_meta[v]
@@ -1063,8 +1063,8 @@ Sets new metadata for the hyperedge with index `e` in the dihypergraph `h`.
 function SimpleHypergraphs.set_hyperedge_meta!(
         h::DirectedHypergraph{T, V, E, D},
         new_value_tail::Union{E, Nothing},
-	new_value_head::Union{E, Nothing},
-	e::Int
+        new_value_head::Union{E, Nothing},
+        e::Int
     ) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
     @boundscheck checkbounds(h.he_meta_tail, e)
     @boundscheck checkbounds(h.he_meta_head, e)
@@ -1102,8 +1102,8 @@ dihypergraph `h`.
 function SimpleHypergraphs.set_hyperedge_meta!(
         h::DirectedHypergraph{T, V, E, D},
         new_value::Union{E, Nothing},
-	e::Int,
-	side::HyperedgeDirection
+        e::Int,
+        side::HyperedgeDirection
     ) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
 
     return if side == tail
@@ -1172,8 +1172,8 @@ Returns a metadata value for one side of the dihyperedge with index `e` in the d
 """
 function SimpleHypergraphs.get_hyperedge_meta(
         h::DirectedHypergraph{T, V, E, D},
-	e::Int,
-	side::HyperedgeDirection
+        e::Int,
+        side::HyperedgeDirection
     ) where {T <: Real, V, E, D <: AbstractDict{Int, T}}
 
     return if side == tail

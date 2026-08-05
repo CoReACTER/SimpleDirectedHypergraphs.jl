@@ -139,6 +139,9 @@ Determines the B-connected component of a vertex `v` in directed hypergraph `h`.
 This is an auxiliary function for `get_strongly_connected_components`, which
 determines the strongly connected components of a directed hypergraph.
 
+For details, see Francisco José Martín-Recuerda Moyano, "Strong Connectivity in Directed
+Hypergraphs and its Application to the Atomic Decomposition of Ontologies", PhD dissertation, 2016.
+
 **Arguments**
 
 * `h` : Dihypergraph
