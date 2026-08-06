@@ -19,7 +19,9 @@ constraints.
 
 Given two integer parameters `nVertices` and `nEdges` (the number of nodes and dihyperedges,
 respectively), the algorithm computes - for each hyperedge `e={1,...,nEdges}` - two random numbers
-`s_t ϵ [1, n]` (i.e., the size of the tail) and `s_h ϵ [1, n]` (i.e., the size of the head).
+`s_t ϵ [1, a]` (i.e., the size of the tail) and `s_h ϵ [1, b]` (i.e., the size of
+the head). If `no_self_loops` is `false` (default), then `a = b = nVertices`. Otherwise,
+`a = nVertices - 1` and `b = nVertices - s_t`.
 
 Then, the algorithm selects uniformly at random `s_t` vertices from among `[1,...,nVertices]` to be
 added in the tail of `e` and `s_h` vertices to be added into the head of `e`. If `no_self_loops` is
