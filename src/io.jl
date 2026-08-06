@@ -60,6 +60,10 @@ TODO: handling for composite metadata types
 * `format`: file format (here `HIF_Format`, for the "hypergraph interchange format")
 * `pretty`: should this be pretty-printed?
 
+**Returns**
+
+`JSON.json` output in `HIF` format
+
 """
 function SimpleHypergraphs.hg_save(
         io::IO,
@@ -186,6 +190,10 @@ Skips a single initial comment.
 * `T` : real-valued datatype for incidence matrix entries/weights (default is `Bool`)
 * `D` : dictionary datatype for internal storage (default is `Dict{Int, T}`)
 
+**Returns**
+
+A dihypergraph of type `HType{T, Any, Any, D}`
+
 """
 function dhg_load(
         io::IO,
@@ -217,7 +225,7 @@ function dhg_load(
     l = split(strip(line))
     length(l) == 2 || throw(ArgumentError("expected two integers"))
     n, k = parse.(Int, l)
-    h = HType{T, D}(n, k)
+    h = HType{T, Any, Any, D}(n, k)
 
     for i in 1:k
         lastv = 0
@@ -342,6 +350,10 @@ https://github.com/pszufe/SimpleHypergraphs.jl.
 * `to_convert` : symbols from the `HIF` attributes to be converted and included in the final
     dataframe
 
+**Returns**
+
+`items`, a `DataFrame` with relevant (meta)data
+
 """
 function _build_attr_dataframe(
         data::Dict{Symbol, Any},
@@ -458,6 +470,11 @@ https://github.com/pszufe/SimpleHypergraphs.jl.
 * `data` : a vector of metadata entries, each of which could be a dictionary, a 2-tuple, or a
     single value
 
+**Returns**
+
+A 2-tuple with the first entry containing dihyperedge tail metadata and the second entry containin
+dihyperedge head metadata
+
 """
 function _separate_tail_head_meta(data::Vector{X}) where {X}
     # Simplest case - "tail" and "head" as separate columns
@@ -544,6 +561,11 @@ in the metadata dictionary.
     during parsing
 * `to_convert` : symbols from the `HIF` attributes to be converted and included in the final
     dataframe
+
+**Returns**
+
+A dihypergraph of type `HType` with weight type `T`, dict type `D`, and vertex and dihyperedge type
+dependent on `V`, `E`, and the `DataFrames` resulting from parsing and processing
 
 """
 function dhg_load(
@@ -673,6 +695,14 @@ The default saving format is `ehgf`.
 * `D` : dictionary for storing values the default is `Dict{Int, T}`
 * `V` : type of values stored in the vertices of the hypergraph
 * `E` : type of values stored in the edges of the hypergraph
+
+**Returns**
+
+A dihypergraph (of type `HType` in general, or of type `DirectedHypergraph` for `EHGF`-formatted
+inputs), with weight type `T`, dictionary type `D`, and vertex and metadata types `V` and `E`,
+respectively.
+
+Note that, for parsing from `HIF`-formatted data, the metadata types may change
 
 """
 function dhg_load(

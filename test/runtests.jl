@@ -81,7 +81,7 @@ dh2 = DirectedHypergraph(tail_2, head_2)
     SimpleHypergraphs.add_hyperedge!(dh2; vertices_tail = Dict(5 => 7.0), vertices_head = Dict(6 => 8.5))
     SimpleHypergraphs.add_hyperedge!(dh2; vertices_tail = Dict(6 => 10.0))
     SimpleHypergraphs.add_hyperedge!(dh2; vertices_head = Dict(5 => 1.5))
-    SimpleHypergraphs.add_vertex!(dh2; hyperedges_tail = Dict(6 => 0.0), hyperedges_head = Dict(5 => -1.5))
+    SimpleHypergraphs.add_vertex!(dh2; dihyperedges_tail = Dict(6 => 0.0), dihyperedges_head = Dict(5 => -1.5))
     @test dh1 == dh2
     mtail = Matrix(dh1.hg_tail)
     mhead = Matrix(dh1.hg_head)
@@ -739,7 +739,7 @@ end;
             @test is_reachable(dh2, i, j, :vertex)
         end
         for e in 1:nhe(dh2)
-            @test is_reachable(dh2, i, e, :hyperedge)
+            @test is_reachable(dh2, i, e, :dihyperedge)
         end
     end
     @test_throws AssertionError is_reachable(dh2, 1, 2, :test)

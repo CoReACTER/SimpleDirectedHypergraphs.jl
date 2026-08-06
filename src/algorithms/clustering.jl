@@ -1,11 +1,45 @@
-_inc(hg::H, i::Int, α::Int, side::Int) where {H <: AbstractDirectedHypergraph} = isnothing(hg[i, α][side]) ? 0 : 1
+"""
+    _inc(h::H, v::Int, e::Int, side::Int) where {H <: AbstractDirectedHypergraph}    
 
-function _num_quads(hg::H, i::Int) where {H <: AbstractDirectedHypergraph}
+Calculate a binary incidence relation. If vertex `v` is included in side `side` (`1` for "tail",
+`2` for "head") of dihyperedge `e` in dihypergraph `h`, then this returns 1; otherwise, it returns
+`0`.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `v` : Vertex index
+* `e` : Dihyperedge index
+* `side` : Either `1` ("tail") or `2` ("head")
+
+**Returns**
+
+`0` for non-incidence, or else `1` for incidence
+
+"""
+_inc(h::H, v::Int, e::Int, side::Int) where {H <: AbstractDirectedHypergraph} = isnothing(h[v, e][side]) ? 0 : 1
+
+"""
+    _num_quads(h::H, v::Int) where {H <: AbstractDirectedHypergraph}
+
+Calculate the number of quads involving vertex `v` in dihypergraph `h`
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `v` : Vertex index
+
+**Returns**
+
+`quads`, the number of quads involving vertex `v`
+
+"""
+function _num_quads(h::H, v::Int) where {H <: AbstractDirectedHypergraph}
     quads = 0
 
-    nv = nhv(hg)
+    nv = nhv(h)
 
-    rel_hes = sort!(collect(union(keys(hg.hg_tail.v2he[i]), keys(hg.hg_head.v2he[i]))))
+    rel_hes = sort!(collect(union(keys(h.hg_tail.v2he[v]), keys(h.hg_head.v2he[v]))))
 
     for α in 1:length(rel_hes)
         a = rel_hes[α]
@@ -13,13 +47,13 @@ function _num_quads(hg::H, i::Int) where {H <: AbstractDirectedHypergraph}
             b = rel_hes[β]
 
             for j in 1:nv
-                if i == j
+                if v == j
                     continue
                 end
 
                 if !(
-                        (isnothing(hg[j, a][1]) && isnothing(hg[j, a][2]))
-                            || (isnothing(hg[j, b][1]) && isnothing(hg[j, b][2]))
+                        (isnothing(h[j, a][1]) && isnothing(h[j, a][2]))
+                            || (isnothing(h[j, b][1]) && isnothing(h[j, b][2]))
                     )
                     quads += 1
                 end
@@ -31,19 +65,42 @@ function _num_quads(hg::H, i::Int) where {H <: AbstractDirectedHypergraph}
 
 end
 
-function _max_num_quads(
-        hg::H,
-        i::Int,
+"""
+    _max_num_quads(
+        h::H,
+        v::Int,
         tail_deg_exc::AbstractVector{Int},
         head_deg_exc::AbstractVector{Int}
     ) where {H <: AbstractDirectedHypergraph}
-    ne = nhe(hg)
+
+Calculate the maximum number of quads vertex `v` could participate in in dihypergraph `h`.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `v` : Vertex index
+* `tail_deg_exc` : A vector containing the tail degrees of every dihyperedge in `h`, excluding `v`
+* `head_deg_exc` : A vector containing the head degrees of every dihyperedge in `h`, excluding `v`
+
+**Returns**
+
+`qmax`, the maximum possible number of quads involving `v` in `h`
+
+"""
+function _max_num_quads(
+        h::H,
+        v::Int,
+        tail_deg_exc::AbstractVector{Int},
+        head_deg_exc::AbstractVector{Int}
+    ) where {H <: AbstractDirectedHypergraph}
+
+    ne = nhe(h)
 
     # TODO: there must be a better implementation
     qmax = 0
     for α in 1:ne
         for β in (α + 1):ne
-            inc_ab = (_inc(hg, i, α, 1) + _inc(hg, i, α, 2)) * (_inc(hg, i, β, 1) + _inc(hg, i, β, 2))
+            inc_ab = (_inc(h, v, α, 1) + _inc(h, v, α, 2)) * (_inc(h, v, β, 1) + _inc(h, v, β, 2))
 
             if inc_ab == 0
                 continue
@@ -110,16 +167,28 @@ function _max_num_quads(
 end
 
 """
-    quad_clustering_coefficient(hg::H, i::Int) where {H <: AbstractDirectedHypergraph} 
+    quad_clustering_coefficient(hg::H, v::Int) where {H <: AbstractDirectedHypergraph} 
 
     quad_clustering_coefficient(hg::H) where {H <: AbstractDirectedHypergraph}
 
-    Implements the "quad clustering coefficient" (QCC) for directed hypergraphs, as described in:
-    Ha, Neri, and Annibale, Chaos 34, 043102 (2024), DOI: 10.1063/5.0188246
+Implements the "quad clustering coefficient" (QCC) for directed hypergraphs, as described in:
+Ha, Neri, and Annibale, Chaos 34, 043102 (2024), DOI: 10.1063/5.0188246
 
-    A *quad* is the shortest simple cycle in a hypergraph, consisting of two vertices `i` and `j` that are both
-    incident on the same two hyperedges `α` and `β`. The QCC is a density, describing the fraction of all possible
-    "quads" a particular vertex `i` participates in. It is always true that `0 <= QCC(hg, i) <= 1`.
+A *quad* is the shortest simple cycle in a hypergraph, consisting of two vertices `i` and `j` that
+are both incident on the same two hyperedges `α` and `β`. The QCC is a density, describing the
+fraction of all possible "quads" a particular vertex `i` participates in. It is always true that
+`0 <= QCC(hg, i) <= 1`.
+
+**Arguments**
+
+* `h` : Dihypergraph
+* `v` : Vertex index
+
+**Returns**
+
+If a vertex index is given, then this function returns the QCC of that vertex. If no index is
+given, then instead a vector with the QCCs of all vertices (in index order) is returned.
+
 """
 function SimpleHypergraphs.quad_clustering_coefficient(hg::H, i::Int) where {H <: AbstractDirectedHypergraph}
     # Degrees of hyperedge tails and heads, not including vertex `i`
@@ -151,5 +220,5 @@ function SimpleHypergraphs.quad_clustering_coefficient(hg::H, i::Int) where {H <
 end
 
 function SimpleHypergraphs.quad_clustering_coefficient(hg::H) where {H <: AbstractDirectedHypergraph}
-    return [quad_clustering_coefficient(hg, i) for i in 1:nhv(hg)]
+    return [quad_clustering_coefficient(hg, v) for v in 1:nhv(hg)]
 end

@@ -1,10 +1,23 @@
 """
-    dual(h::DirectedHypergraph)
+    SimpleHypergraphs.dual(h::DirectedHypergraph)
 
 Return the dual of the directed hypergraph `h`.
 
-NOTE
-`h` needs to have at least one dimension greater than 0.
+In matrix representation, the dual `h'` of `h` is the transpose. In addition to constructing a
+`DirectedHypergraph` with `nhe(h)` vertices and `nhv(h)` dihyperedges, we swap the dihyperedge and
+vertex metadata from `h`, combining the tail and head metadata for a given dihyperedge in `h` into
+a tuple `(t_meta, h_meta)`.
+
+NOTE: `h` needs to have at least one dimension greater than 0.
+
+**Arguments**
+
+* `h` : Dihypergraph
+
+**Returns**
+
+A `DirectedHypergraph` that is the dual of `h`
+
 """
 function SimpleHypergraphs.dual(h::DirectedHypergraph)
     @assert(nhv(h) > 0 || nhe(h) > 0)
